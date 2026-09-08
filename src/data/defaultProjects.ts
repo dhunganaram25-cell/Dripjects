@@ -24,7 +24,7 @@ export const initialProjectsDatabase: ProjectsDatabase = {
       directDownloadUrl: "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
       fileSize: "Custom Map (.zip)",
       bannerImage: "/assets/pvpprac1.0beta.png",
-      youtubeVideoUrl: "https://www.youtube.com/watch?v=MmB9b5njVbA",
+      youtubeVideoUrl: "https://youtu.be/tf4zaQ_-m0g",
       galleryImages: [
         "/assets/pvpprac1.0beta.png",
         "https://imgs.search.brave.com/OIwFdBOwWPkbPO80ppQ3LcxX01s1Rp5vqWd8X9rdWE4/rs:fit:0:180:1:0/g:ce/aHR0cHM6Ly93YWxs/cGFwZXJzLmNvbS9p/bWFnZXMvdGh1bWJu/YWlsL21pbmVjcmFm/dC1ncmFzcy10NHg4/Z3N6eDk1b2t2Y3kx/LmpwZw"
