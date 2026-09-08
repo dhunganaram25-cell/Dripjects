@@ -1,0 +1,72 @@
+{
+  "metadata": {
+    "appName": "Dripjects",
+    "owner": "Saphal (Creator)",
+    "lastUpdated": "2026-09-08T00:00:00.000Z",
+    "version": "1.0.0",
+    "totalProjects": 1,
+    "totalDownloads": 128,
+    "totalDiamonds": 42
+  },
+  "projects": [
+    {
+      "id": "pvp-practice-1-0-beta",
+      "title": "Pvp_Practice 1.0 Beta",
+      "tagline": "Custom PvP practice map — Requires VexBot mod and is totally open source.",
+      "category": "maps",
+      "version": "1.0 Beta",
+      "gameVersion": "Minecraft Java",
+      "status": "Beta",
+      "completionPercentage": 100,
+      "googleDriveUrl": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
+      "directDownloadUrl": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
+      "fileSize": "Custom Map (.zip)",
+      "bannerImage": "/assets/pvpprac1.0beta.png",
+      "galleryImages": [
+        "/assets/pvpprac1.0beta.png"
+      ],
+      "description": "Requires vexbot mod and is totally opensource.\n\nCustom PvP practice map designed for combat training, bot duel sparring, weapon combos, and movement drills.",
+      "features": [
+        "Password For Unzipping is 123",
+        "Requires VexBot mod for bot training & sparring routines",
+        "Totally open source custom PvP arena",
+        "Optimized arena layout for duels, spacing, and weapon combos",
+        "Direct Google Drive one-click download"
+      ],
+      "installation": "1. Download the map file via the direct link.\n2. Extract the folder into your Minecraft '.minecraft/saves' folder.\n3. Make sure the VexBot mod is loaded in your mods directory.\n4. Launch Minecraft and load the Pvp_Practice 1.0 Beta world.",
+      "changelog": [
+        {
+          "version": "1.0 Beta",
+          "date": "2026-09-08",
+          "notes": [
+            "Initial release of Pvp_Practice 1.0 Beta",
+            "Requires VexBot mod",
+            "100% open source"
+          ]
+        }
+      ],
+      "diamonds": 42,
+      "downloads": 128,
+      "views": 640,
+      "createdAt": "2026-09-08T00:00:00.000Z",
+      "updatedAt": "2026-09-08T00:00:00.000Z",
+      "author": "Saphal",
+      "zipPassword": "123",
+      "tags": [
+        "PvP",
+        "Practice",
+        "VexBot",
+        "Map",
+        "Open Source",
+        "Duel"
+      ],
+      "featured": true,
+      "mirrorLinks": [
+        {
+          "label": "Google Drive Direct Download",
+          "url": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download"
+        }
+      ]
+    }
+  ]
+}

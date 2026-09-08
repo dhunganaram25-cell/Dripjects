@@ -1,0 +1,6 @@
+{
+  "name": "Dripjects",
+  "description": "Personal creations and projects hub inspired by Planet Minecraft with Google Drive direct download integration and JSON database storage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
