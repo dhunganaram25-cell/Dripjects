@@ -222,9 +222,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             {project.tagline}
           </p>
 
-          {/* Tags */}
-          <div className="flex flex-wrap gap-1 mt-2.5">
-            {project.tags.slice(0, 3).map((tag, idx) => (
+          {/* Tags & Required Mod indicator */}
+          <div className="flex flex-wrap items-center gap-1 mt-2.5">
+            {project.requiredMods && project.requiredMods.length > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
+                Requires {project.requiredMods[0].name}
+              </span>
+            )}
+            {project.tags.slice(0, 2).map((tag, idx) => (
               <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-slate-800/80 text-slate-300">
                 #{tag}
               </span>

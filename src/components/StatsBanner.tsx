@@ -40,16 +40,16 @@ export const StatsBanner: React.FC<StatsBannerProps> = ({
           {/* Key Feature Badges */}
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-slate-300">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60">
-              <Cpu className="w-4 h-4 text-amber-400" />
-              <span>Requires VexBot Mod</span>
+              <Zap className="w-4 h-4 text-emerald-400" />
+              <span>Direct Google Drive Delivery</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60">
               <Code2 className="w-4 h-4 text-emerald-400" />
-              <span>100% Open Source</span>
+              <span>100% Open Source Vault</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60">
               <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              <span>Google Identity Protected</span>
+              <span>Google Identity Verified</span>
             </div>
           </div>
         </div>

@@ -10,7 +10,8 @@ import {
   Code2,
   Cpu,
   Share2,
-  KeyRound
+  KeyRound,
+  ExternalLink
 } from 'lucide-react';
 import { Project } from '../types';
 
@@ -154,17 +155,55 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
           {/* Requirements & Open Source Badges */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300">
-              <Cpu className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                  Mod Requirement
-                </h4>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  Requires <strong>VexBot mod</strong> for bot training routines & combat sparring.
-                </p>
+            {project.requiredMods && project.requiredMods.length > 0 ? (
+              project.requiredMods.map((mod, mIdx) => (
+                <div key={mIdx} className="flex items-start justify-between gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300">
+                  <div className="flex items-start gap-3">
+                    <Cpu className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                          Required Mod: {mod.name}
+                        </h4>
+                        {mod.version && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 bg-amber-500/20 rounded text-amber-200">
+                            {mod.version}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-300 mt-0.5">
+                        {mod.description || `This map requires ${mod.name} to operate properly.`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {mod.url && (
+                    <a
+                      href={mod.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors shadow"
+                      title={`Download ${mod.name}`}
+                    >
+                      <span>Get Mod</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-800/40 border border-slate-800 text-slate-300">
+                <Cpu className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                    Vanilla Compatible
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    No extra mods required to play this project.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
               <Code2 className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />

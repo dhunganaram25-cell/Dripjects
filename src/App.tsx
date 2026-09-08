@@ -267,7 +267,6 @@ export default function App() {
     return (
       <GoogleLoginGate
         onLoginSuccess={(user) => setCurrentUser(user)}
-        defaultEmail="saphaladhikari12@gmail.com"
       />
     );
   }
@@ -365,7 +364,7 @@ export default function App() {
           <div className="flex items-center gap-4 text-slate-400">
             <span>Direct Google Drive Delivery</span>
             <span>•</span>
-            <span>Requires VexBot Mod</span>
+            <span>Password Protected Archives</span>
           </div>
         </div>
       </footer>

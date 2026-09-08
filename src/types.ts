@@ -17,6 +17,14 @@ export interface ProjectChangelog {
   notes: string[];
 }
 
+export interface RequiredMod {
+  name: string;
+  url: string;
+  version?: string;
+  description?: string;
+  required?: boolean;
+}
+
 export interface MirrorLink {
   label: string;
   url: string;
@@ -48,6 +56,7 @@ export interface Project {
   author: string;
   tags: string[];
   zipPassword?: string;
+  requiredMods?: RequiredMod[];
   mirrorLinks?: MirrorLink[];
   featured?: boolean;
 }

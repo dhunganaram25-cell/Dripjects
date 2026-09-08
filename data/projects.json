@@ -52,6 +52,15 @@
       "updatedAt": "2026-09-08T00:00:00.000Z",
       "author": "Saphal",
       "zipPassword": "123",
+      "requiredMods": [
+        {
+          "name": "VexBot Mod",
+          "url": "https://modrinth.com/mod/vexbot",
+          "version": "Latest for Minecraft Java",
+          "description": "Required for sparring bots, practice dummy combat routines, and AI duel mechanics.",
+          "required": true
+        }
+      ],
       "tags": [
         "PvP",
         "Practice",
