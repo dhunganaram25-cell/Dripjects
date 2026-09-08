@@ -9,6 +9,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { Project } from '../types';
+import { ProjectMediaCover } from './ProjectMediaCover';
 
 interface ProjectCardProps {
   project: Project;
@@ -55,21 +56,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         onClick={() => onSelect(project)}
         className="group relative flex flex-col sm:flex-row items-stretch gap-4 p-4 rounded-2xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition-all cursor-pointer shadow-sm hover:shadow-lg"
       >
-        {/* Left Thumbnail */}
-        <div className="relative sm:w-56 h-36 sm:h-auto rounded-xl overflow-hidden shrink-0 bg-slate-950">
-          <img
-            src={project.bannerImage}
-            alt={project.title}
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/assets/pvpprac1.0beta.png';
-            }}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        {/* Left Thumbnail with YouTube Hover Preview */}
+        <div className="relative sm:w-56 h-40 sm:h-auto rounded-xl overflow-hidden shrink-0 bg-slate-950">
+          <ProjectMediaCover 
+            project={project} 
+            aspectRatio="video" 
+            className="h-full w-full rounded-none" 
+            allowWatchFull={false}
           />
-          <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-950/80 backdrop-blur-sm text-slate-200">
+          <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-950/80 backdrop-blur-sm text-slate-200 z-10 pointer-events-none">
             {project.category.replace('-', ' ')}
           </div>
-          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-950/90 text-slate-300">
+          <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-950/90 text-slate-300 z-10 pointer-events-none">
             {project.fileSize}
           </div>
         </div>
@@ -157,21 +155,17 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
       onClick={() => onSelect(project)}
       className="group relative flex flex-col rounded-2xl overflow-hidden bg-slate-900/80 hover:bg-slate-900 border border-slate-800/90 hover:border-emerald-500/50 transition-all duration-200 hover:-translate-y-0.5 shadow-md hover:shadow-xl hover:shadow-emerald-950/20 cursor-pointer"
     >
-      {/* Thumbnail Banner */}
-      <div className="relative h-48 w-full overflow-hidden bg-slate-950">
-        <img
-          src={project.bannerImage}
-          alt={project.title}
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/assets/pvpprac1.0beta.png';
-          }}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      {/* Thumbnail Banner with YouTube 5s Hover Preview */}
+      <div className="relative w-full overflow-hidden bg-slate-950">
+        <ProjectMediaCover 
+          project={project} 
+          aspectRatio="video" 
+          className="rounded-none w-full"
+          allowWatchFull={false}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
 
         {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none">
           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${catColor.bg} ${catColor.text} ${catColor.border}`}>
             {project.category.replace('-', ' ')}
           </span>
@@ -182,12 +176,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           )}
         </div>
 
-        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded text-[11px] font-mono bg-slate-950/80 backdrop-blur-md text-slate-300 border border-slate-800">
+        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded text-[11px] font-mono bg-slate-950/80 backdrop-blur-md text-slate-300 border border-slate-800 z-20 pointer-events-none">
           {project.fileSize}
         </div>
 
         {/* Planet Minecraft Progress Bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-800">
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-800 z-20">
           <div 
             className={`h-full ${is100Percent ? 'bg-emerald-400' : 'bg-amber-400'}`}
             style={{ width: `${Math.min(project.completionPercentage, 100)}%` }}

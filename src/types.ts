@@ -43,6 +43,7 @@ export interface Project {
   directDownloadUrl: string;
   fileSize: string;
   bannerImage: string;
+  youtubeVideoUrl?: string;
   galleryImages: string[];
   description: string;
   features: string[];

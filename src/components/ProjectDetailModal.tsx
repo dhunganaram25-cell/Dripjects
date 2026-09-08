@@ -14,6 +14,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Project } from '../types';
+import { ProjectMediaCover } from './ProjectMediaCover';
+import { ProjectImageGallery } from './ProjectImageGallery';
 
 interface ProjectDetailModalProps {
   project: Project | null;
@@ -32,7 +34,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 }) => {
   if (!project) return null;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'installation' | 'changelog'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'gallery' | 'features' | 'installation' | 'changelog'>('overview');
   const [copiedShare, setCopiedShare] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -92,20 +94,15 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
         {/* Modal Scrollable Content */}
         <div className="max-h-[82vh] overflow-y-auto p-6 space-y-6">
-          {/* Main Gallery Hero */}
+          {/* Main Hero Media Cover (YouTube 5s Hover Preview & Full Player) */}
           <div className="space-y-3">
-            <div className="relative h-64 sm:h-80 w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
-              <img
-                src={images[selectedImageIndex] || project.bannerImage}
-                alt={project.title}
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/assets/pvpprac1.0beta.png';
-                }}
-                className="w-full h-full object-cover"
+            <div className="relative w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 shadow-xl">
+              <ProjectMediaCover 
+                project={project} 
+                aspectRatio="video" 
+                allowWatchFull={true} 
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between pointer-events-none">
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none z-20">
                 <div className="bg-slate-950/90 backdrop-blur-md px-3 py-1 rounded-md text-xs font-mono text-emerald-400 border border-slate-800">
                   {project.gameVersion}
                 </div>
@@ -114,25 +111,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* Thumbnail switcher if multiple images */}
-            {images.length > 1 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImageIndex(idx)}
-                    className={`relative w-20 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-all ${
-                      selectedImageIndex === idx
-                        ? 'border-emerald-500 scale-102 ring-2 ring-emerald-500/30'
-                        : 'border-slate-800 opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt={`thumb ${idx}`} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Title & Tagline & Author */}
@@ -273,9 +251,10 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
 
           {/* Navigation Tabs */}
-          <div className="border-b border-slate-800 flex items-center gap-2">
+          <div className="border-b border-slate-800 flex items-center gap-2 overflow-x-auto pb-0.5">
             {[
               { id: 'overview', label: 'Overview' },
+              { id: 'gallery', label: `Gallery (${images.length})` },
               { id: 'features', label: `Features (${project.features.length})` },
               { id: 'installation', label: 'Installation' },
               { id: 'changelog', label: `Changelog (${project.changelog.length})` },
@@ -283,7 +262,7 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
                   activeTab === tab.id
                     ? 'border-emerald-500 text-emerald-400 bg-slate-800/30'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -297,10 +276,17 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           {/* Tab Content */}
           <div className="pt-2">
             {activeTab === 'overview' && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-line bg-slate-950/40 p-4 rounded-xl border border-slate-800/80">
                   {project.description}
                 </div>
+
+                {/* Embedded Image Gallery in Overview */}
+                {images.length > 0 && (
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <ProjectImageGallery images={images} projectTitle={project.title} />
+                  </div>
+                )}
 
                 {/* Tags List */}
                 <div className="pt-3 border-t border-slate-800">
@@ -315,6 +301,12 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'gallery' && (
+              <div className="space-y-4">
+                <ProjectImageGallery images={images} projectTitle={project.title} />
               </div>
             )}
 

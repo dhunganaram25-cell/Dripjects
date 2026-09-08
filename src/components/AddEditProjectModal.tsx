@@ -52,6 +52,9 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
   const [tagsText, setTagsText] = useState('');
   const [author, setAuthor] = useState('Saphal');
   const [featured, setFeatured] = useState(false);
+  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState('');
+  const [galleryImagesText, setGalleryImagesText] = useState('');
+  const [zipPassword, setZipPassword] = useState('123');
 
   useEffect(() => {
     if (initialProject) {
@@ -65,6 +68,11 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
       setGoogleDriveUrl(initialProject.googleDriveUrl);
       setFileSize(initialProject.fileSize);
       setBannerImage(initialProject.bannerImage);
+      setYoutubeVideoUrl(initialProject.youtubeVideoUrl || '');
+      setGalleryImagesText(
+        initialProject.galleryImages ? initialProject.galleryImages.join('\n') : ''
+      );
+      setZipPassword(initialProject.zipPassword || '123');
       setDescription(initialProject.description);
       setFeaturesText(initialProject.features.join('\n'));
       setInstallation(initialProject.installation);
@@ -83,6 +91,9 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
       setGoogleDriveUrl('');
       setFileSize('25 MB');
       setBannerImage(PRESET_BANNERS[0].url);
+      setYoutubeVideoUrl('');
+      setGalleryImagesText('');
+      setZipPassword('123');
       setDescription('');
       setFeaturesText('');
       setInstallation('');
@@ -113,6 +124,15 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
       .map(s => s.trim())
       .filter(Boolean);
 
+    const rawGallery = galleryImagesText
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const galleryImages = rawGallery.length > 0 
+      ? rawGallery 
+      : [bannerImage.trim() || PRESET_BANNERS[0].url];
+
     const projectData: Partial<Project> = {
       ...(initialProject ? { id: initialProject.id } : {}),
       title: title.trim(),
@@ -126,7 +146,9 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
       directDownloadUrl: driveInfo.directDownloadUrl || googleDriveUrl.trim(),
       fileSize: fileSize.trim() || '10 MB',
       bannerImage: bannerImage.trim() || PRESET_BANNERS[0].url,
-      galleryImages: [bannerImage.trim() || PRESET_BANNERS[0].url],
+      youtubeVideoUrl: youtubeVideoUrl.trim() || undefined,
+      galleryImages,
+      zipPassword: zipPassword.trim() || '123',
       description: description.trim(),
       features,
       installation: installation.trim(),
@@ -342,12 +364,50 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
             </div>
           </div>
 
+          {/* YouTube Video URL (Cover & Hover Preview) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-red-500 fill-current" viewBox="0 0 24 24">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                <span>YouTube Video URL (Cover & 5s Hover Preview)</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal">Plays 5s preview on hover & fetches YouTube thumbnail</span>
+            </label>
+            <input
+              type="url"
+              value={youtubeVideoUrl}
+              onChange={(e) => setYoutubeVideoUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=MmB9b5njVbA or https://youtu.be/..."
+              className="w-full px-3.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 font-mono"
+            />
+          </div>
+
+          {/* Image Gallery Screenshots (Online Links) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Image Gallery Online Links (One URL per line)</span>
+              </span>
+              <span className="text-[10px] text-slate-400 font-normal">Displayed in screenshots gallery with full lightbox viewer</span>
+            </label>
+            <textarea
+              rows={3}
+              value={galleryImagesText}
+              onChange={(e) => setGalleryImagesText(e.target.value)}
+              placeholder="https://imgs.search.brave.com/...&#10;https://images.unsplash.com/..."
+              className="w-full px-3.5 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 font-mono resize-y"
+            />
+          </div>
+
           {/* Banner Image with Presets */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Banner Screenshot URL</span>
+                <span>Fallback Banner Image URL</span>
               </label>
               <div className="flex items-center gap-1 text-[11px] text-slate-400">
                 <span>Presets:</span>
@@ -414,8 +474,8 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
             />
           </div>
 
-          {/* Tags & Author & Featured */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+          {/* Tags & Author & Zip Password */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-center">
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-300 mb-1">
                 Tags (comma-separated)
@@ -439,6 +499,19 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
                 onChange={(e) => setAuthor(e.target.value)}
                 placeholder="Your Name"
                 className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                ZIP Password
+              </label>
+              <input
+                type="text"
+                value={zipPassword}
+                onChange={(e) => setZipPassword(e.target.value)}
+                placeholder="123"
+                className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 font-mono"
               />
             </div>
           </div>

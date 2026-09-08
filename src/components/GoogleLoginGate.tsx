@@ -203,21 +203,6 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
     }, 300);
   };
 
-  const handleGuestLogin = () => {
-    setIsSigningIn(true);
-    setTimeout(() => {
-      const user: GoogleUser = {
-        id: `visitor-${Date.now()}`,
-        name: 'Community Visitor',
-        email: 'visitor@dripjects.public',
-        picture: `https://lh3.googleusercontent.com/a/default-user=s96-c`,
-      };
-      localStorage.setItem('dripjects_google_user', JSON.stringify(user));
-      onLoginSuccess(user);
-      setIsSigningIn(false);
-    }, 300);
-  };
-
   const handleSaveClientId = (newId: string) => {
     setClientId(newId.trim());
     localStorage.setItem('dripjects_google_client_id', newId.trim());
@@ -350,17 +335,6 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
                 />
               </svg>
               <span>{isSigningIn ? 'Connecting to Google...' : 'Sign in with Google'}</span>
-            </button>
-
-            {/* Frictionless Visitor Sign-in */}
-            <button
-              id="visitor-login-btn"
-              onClick={handleGuestLogin}
-              disabled={isSigningIn}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl transition-all cursor-pointer"
-            >
-              <User className="w-4 h-4 text-slate-400" />
-              <span>Enter as Public Visitor</span>
             </button>
           </div>
 

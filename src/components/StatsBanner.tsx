@@ -1,6 +1,7 @@
 import React from 'react';
 import { HardDriveDownload, ShieldCheck, Zap, Cpu, Code2 } from 'lucide-react';
 import { Project } from '../types';
+import { ProjectMediaCover } from './ProjectMediaCover';
 
 interface StatsBannerProps {
   featuredProject?: Project;
@@ -61,22 +62,18 @@ export const StatsBanner: React.FC<StatsBannerProps> = ({
               onClick={() => onSelectProject(featuredProject)}
               className="group relative rounded-xl overflow-hidden border border-slate-700/80 bg-slate-900/90 shadow-xl transition-all hover:border-emerald-500/60 cursor-pointer"
             >
-              {/* Banner Image Preview */}
-              <div className="relative h-44 w-full overflow-hidden bg-slate-950">
-                <img
-                  src={featuredProject.bannerImage}
-                  alt={featuredProject.title}
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/assets/pvpprac1.0beta.jpg';
-                  }}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              {/* Banner Image Preview with YouTube Hover 5s Preview */}
+              <div className="relative w-full overflow-hidden bg-slate-950">
+                <ProjectMediaCover
+                  project={featuredProject}
+                  aspectRatio="video"
+                  className="rounded-none w-full"
+                  allowWatchFull={false}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
-                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold text-[11px] uppercase tracking-wider shadow">
+                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold text-[11px] uppercase tracking-wider shadow z-20 pointer-events-none">
                   Featured Map
                 </div>
-                <div className="absolute top-3 right-3 px-2 py-0.5 rounded bg-slate-900/90 border border-slate-700 text-slate-200 text-xs font-mono">
+                <div className="absolute top-3 right-3 px-2 py-0.5 rounded bg-slate-900/90 border border-slate-700 text-slate-200 text-xs font-mono z-20 pointer-events-none">
                   {featuredProject.fileSize}
                 </div>
               </div>
