@@ -2,10 +2,10 @@ import { Project, ProjectsDatabase } from '../types';
 import { initialProjectsDatabase } from '../data/defaultProjects';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
 
-const LOCAL_STORAGE_KEY = 'dripjects_database_v4';
+const LOCAL_STORAGE_KEY = 'dripjects_database_v5';
 
 export async function fetchProjectsDatabase(): Promise<ProjectsDatabase> {
-  // First try fetching from backend if available and returns JSON
+  // 1. Try fetching from dynamic backend API if running in full-stack mode
   try {
     const res = await fetch('/api/projects');
     const contentType = res.headers.get('content-type') || '';
@@ -20,20 +20,40 @@ export async function fetchProjectsDatabase(): Promise<ProjectsDatabase> {
     // API not reachable, expected in static deployment (e.g. Vercel)
   }
 
-  // Fallback to localStorage cache if present and valid
+  // 2. Try fetching static /data/projects.json (guaranteed static asset on Vercel)
+  try {
+    const staticRes = await fetch('/data/projects.json');
+    const staticType = staticRes.headers.get('content-type') || '';
+    if (staticRes.ok && staticType.includes('application/json')) {
+      const staticData = await staticRes.json();
+      if (staticData && Array.isArray(staticData.projects)) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(staticData));
+        return staticData;
+      }
+    }
+  } catch {
+    // Fall through
+  }
+
+  // 3. Fallback to localStorage cache if present and newer than bundled default
   try {
     const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed && Array.isArray(parsed.projects)) {
-        return parsed;
+        // If bundled data is newer or has updated projects, prioritize bundled data
+        const bundledUpdated = new Date(initialProjectsDatabase.metadata.lastUpdated).getTime();
+        const cachedUpdated = new Date(parsed.metadata?.lastUpdated || 0).getTime();
+        if (cachedUpdated >= bundledUpdated) {
+          return parsed;
+        }
       }
     }
   } catch (e) {
     console.error('Error reading localStorage cache', e);
   }
 
-  // Clean initial static dataset
+  // 4. Bundled fallback imported directly from data/projects.json at build time
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialProjectsDatabase));
   return initialProjectsDatabase;
 }

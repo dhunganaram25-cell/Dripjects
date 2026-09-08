@@ -11,19 +11,96 @@ import {
   X, 
   ExternalLink, 
   ZoomIn, 
-  Maximize2 
+  ImageIcon 
 } from 'lucide-react';
+import { getSafeImageCandidates } from '../utils/imageUtils';
 
 interface ProjectImageGalleryProps {
   images: string[];
   projectTitle: string;
 }
 
+interface GalleryCardProps {
+  imgUrl: string;
+  index: number;
+  projectTitle: string;
+  onClick: (workingUrl: string) => void;
+}
+
+const GalleryCard: React.FC<GalleryCardProps> = ({
+  imgUrl,
+  index,
+  projectTitle,
+  onClick,
+}) => {
+  const candidates = React.useMemo(() => getSafeImageCandidates(imgUrl), [imgUrl]);
+  const [candidateIdx, setCandidateIdx] = useState(0);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [hasFailedAll, setHasFailedAll] = useState(false);
+
+  const currentSrc = candidates[candidateIdx] || imgUrl;
+
+  const handleImageError = () => {
+    if (candidateIdx + 1 < candidates.length) {
+      setCandidateIdx(prev => prev + 1);
+    } else {
+      setHasFailedAll(true);
+    }
+  };
+
+  return (
+    <div
+      onClick={() => onClick(currentSrc)}
+      className="group relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition-all cursor-pointer shadow-md"
+    >
+      {/* Loading Skeleton */}
+      {!hasLoaded && !hasFailedAll && (
+        <div className="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center">
+          <ImageIcon className="w-5 h-5 text-slate-600" />
+        </div>
+      )}
+
+      {/* Render Image */}
+      {!hasFailedAll ? (
+        <img
+          src={currentSrc}
+          alt={`${projectTitle} screenshot ${index + 1}`}
+          referrerPolicy="no-referrer"
+          loading="lazy"
+          onLoad={() => setHasLoaded(true)}
+          onError={handleImageError}
+          className={`w-full h-full object-cover object-center group-hover:scale-110 transition-all duration-300 ${
+            hasLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      ) : (
+        <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-slate-900 text-slate-500">
+          <ImageIcon className="w-6 h-6 mb-1 text-slate-600" />
+          <span className="text-[10px]">Screenshot #{index + 1}</span>
+        </div>
+      )}
+
+      {/* Hover Overlay */}
+      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white">
+        <div className="p-2 rounded-lg bg-black/60 text-emerald-400 backdrop-blur-sm shadow">
+          <ZoomIn className="w-4 h-4" />
+        </div>
+      </div>
+
+      {/* Index badge */}
+      <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-mono text-slate-300 pointer-events-none">
+        #{index + 1}
+      </div>
+    </div>
+  );
+};
+
 export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
   images,
   projectTitle,
 }) => {
   const [activeLightboxIndex, setActiveLightboxIndex] = useState<number | null>(null);
+  const [lightboxCandidateIdx, setLightboxCandidateIdx] = useState(0);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -47,9 +124,18 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeLightboxIndex, images.length]);
 
+  // Reset candidate index when active image changes
+  useEffect(() => {
+    setLightboxCandidateIdx(0);
+  }, [activeLightboxIndex]);
+
   if (!images || images.length === 0) {
     return null;
   }
+
+  const activeImageRaw = activeLightboxIndex !== null ? images[activeLightboxIndex] : '';
+  const lightboxCandidates = activeImageRaw ? getSafeImageCandidates(activeImageRaw) : [];
+  const currentLightboxSrc = lightboxCandidates[lightboxCandidateIdx] || activeImageRaw;
 
   return (
     <div className="space-y-3">
@@ -63,41 +149,20 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
           </span>
         </h4>
         <span className="text-[11px] text-slate-500">
-          Editable via <code className="text-emerald-400">projects.json</code>
+          Managed via <code className="text-emerald-400">projects.json</code>
         </span>
       </div>
 
       {/* Thumbnails Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {images.map((imgUrl, index) => (
-          <div
-            key={index}
+          <GalleryCard
+            key={`${imgUrl}-${index}`}
+            imgUrl={imgUrl}
+            index={index}
+            projectTitle={projectTitle}
             onClick={() => setActiveLightboxIndex(index)}
-            className="group relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition-all cursor-pointer shadow-md"
-          >
-            <img
-              src={imgUrl}
-              alt={`${projectTitle} screenshot ${index + 1}`}
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
-              onError={(e) => {
-                // Fallback if image fails
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
-
-            {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white">
-              <div className="p-2 rounded-lg bg-black/60 text-emerald-400 backdrop-blur-sm">
-                <ZoomIn className="w-4 h-4" />
-              </div>
-            </div>
-
-            {/* Index badge */}
-            <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-mono text-slate-300 pointer-events-none">
-              #{index + 1}
-            </div>
-          </div>
+          />
         ))}
       </div>
 
@@ -122,11 +187,11 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
 
             <div className="flex items-center gap-2">
               <a
-                href={images[activeLightboxIndex]}
+                href={currentLightboxSrc}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors"
-                title="Open original image"
+                className="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+                title="Open full image"
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
@@ -161,9 +226,15 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
 
             {/* Displayed Image */}
             <img
-              src={images[activeLightboxIndex]}
+              key={currentLightboxSrc}
+              src={currentLightboxSrc}
               alt={`${projectTitle} large view ${activeLightboxIndex + 1}`}
               referrerPolicy="no-referrer"
+              onError={() => {
+                if (lightboxCandidateIdx + 1 < lightboxCandidates.length) {
+                  setLightboxCandidateIdx(prev => prev + 1);
+                }
+              }}
               className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl border border-slate-800"
             />
 
@@ -186,24 +257,28 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
             className="w-full max-w-2xl flex items-center justify-center gap-2 overflow-x-auto py-2 px-4 z-10"
             onClick={(e) => e.stopPropagation()}
           >
-            {images.map((img, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveLightboxIndex(i)}
-                className={`relative w-16 h-10 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
-                  activeLightboxIndex === i
-                    ? 'border-emerald-400 scale-105 shadow-lg shadow-emerald-500/30'
-                    : 'border-slate-800 opacity-60 hover:opacity-100'
-                }`}
-              >
-                <img
-                  src={img}
-                  alt={`thumbnail ${i + 1}`}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
+            {images.map((img, i) => {
+              const thumbCandidates = getSafeImageCandidates(img);
+              const thumbSrc = thumbCandidates[0] || img;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveLightboxIndex(i)}
+                  className={`relative w-16 h-10 rounded-lg overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                    activeLightboxIndex === i
+                      ? 'border-emerald-400 scale-105 shadow-lg shadow-emerald-500/30'
+                      : 'border-slate-800 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img
+                    src={thumbSrc}
+                    alt={`thumbnail ${i + 1}`}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

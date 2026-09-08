@@ -39,6 +39,14 @@ async function saveDatabase(data: any) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    
+    // Also sync to public/data/projects.json for static builds
+    const publicDataDir = path.join(process.cwd(), 'public', 'data');
+    if (!fs.existsSync(publicDataDir)) {
+      fs.mkdirSync(publicDataDir, { recursive: true });
+    }
+    await fs.promises.writeFile(path.join(publicDataDir, 'projects.json'), JSON.stringify(data, null, 2), 'utf-8');
+    
     return true;
   } catch (err) {
     console.error('Error saving projects.json:', err);
