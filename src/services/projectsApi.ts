@@ -2,13 +2,14 @@ import { Project, ProjectsDatabase } from '../types';
 import { initialProjectsDatabase } from '../data/defaultProjects';
 import { parseGoogleDriveUrl } from '../utils/googleDrive';
 
-const LOCAL_STORAGE_KEY = 'dripjects_database_v3';
+const LOCAL_STORAGE_KEY = 'dripjects_database_v4';
 
 export async function fetchProjectsDatabase(): Promise<ProjectsDatabase> {
-  // First try fetching from backend if available
+  // First try fetching from backend if available and returns JSON
   try {
     const res = await fetch('/api/projects');
-    if (res.ok) {
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
       const data = await res.json();
       if (data && Array.isArray(data.projects)) {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));

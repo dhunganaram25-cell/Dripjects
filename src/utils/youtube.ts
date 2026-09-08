@@ -31,33 +31,35 @@ export function extractYouTubeId(url?: string): string | null {
 }
 
 /**
- * Returns high quality and max-res thumbnails for a YouTube video
+ * Returns high quality and max-res thumbnails for a YouTube video using YouTube's official i.ytimg.com CDN
  */
 export function getYouTubeThumbnails(videoId: string) {
   return {
-    maxres: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-    hq: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-    mq: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+    maxres: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+    hq: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    mq: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+    fallbackMaxres: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    fallbackHq: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
   };
 }
 
 /**
- * Builds the 5-second muted preview embed URL (loops 0s to 5s without controls)
+ * Builds the muted video preview embed URL (loops smoothly without halting controls)
  */
-export function getYouTubePreviewEmbedUrl(videoId: string, durationSec = 5): string {
-  // Parameters:
-  // autoplay=1 (start playing immediately)
-  // mute=1 (browsers allow autoplay only if muted)
-  // controls=0 (hide playback bar)
-  // loop=1 & playlist (loops continuously)
-  // start=0 & end=5 (plays first 5 seconds)
-  // modestbranding=1 & rel=0 (clean display)
-  return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&start=0&end=${durationSec}&modestbranding=1&rel=0&playsinline=1&showinfo=0&disablekb=1&fs=0`;
+export function getYouTubePreviewEmbedUrl(videoId: string): string {
+  // Use standard www.youtube.com domain with:
+  // autoplay=1 (browser allows autoplay when muted)
+  // mute=1 (required by browser autoplay policy)
+  // controls=0 (clean hover preview)
+  // loop=1 & playlist (continuous loop without ending after 5s)
+  // playsinline=1 & rel=0 (in-place playback, no external suggestions)
+  // modestbranding=1 & enablejsapi=1
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&rel=0&modestbranding=1&enablejsapi=1`;
 }
 
 /**
  * Builds full playable embed URL with audio and controls
  */
 export function getYouTubeFullEmbedUrl(videoId: string): string {
-  return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&controls=1&rel=0&modestbranding=1&playsinline=1`;
+  return `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1`;
 }

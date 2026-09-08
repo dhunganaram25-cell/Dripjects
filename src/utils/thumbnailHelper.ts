@@ -37,6 +37,8 @@ export function getProjectThumbnailCandidates(project: Project): ThumbnailCandid
     const yt = getYouTubeThumbnails(videoId);
     addCandidate(yt.maxres, 'youtube');
     addCandidate(yt.hq, 'youtube');
+    addCandidate(yt.fallbackMaxres, 'youtube');
+    addCandidate(yt.fallbackHq, 'youtube');
   }
 
   // 2. Gallery images (Priority 2: If YouTube link is not working or not present)
@@ -97,6 +99,7 @@ export function useProjectThumbnail(project: Project) {
     // YouTube returns a 120x90 placeholder image when maxres/hq is missing
     if (
       currentCandidate?.sourceType === 'youtube' &&
+      img.naturalWidth > 0 &&
       img.naturalWidth <= 120 &&
       img.naturalHeight <= 90
     ) {
