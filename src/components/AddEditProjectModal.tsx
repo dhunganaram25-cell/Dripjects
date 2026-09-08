@@ -55,6 +55,7 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
   const [youtubeVideoUrl, setYoutubeVideoUrl] = useState('');
   const [galleryImagesText, setGalleryImagesText] = useState('');
   const [zipPassword, setZipPassword] = useState('123');
+  const [requirementsText, setRequirementsText] = useState('');
 
   useEffect(() => {
     if (initialProject) {
@@ -73,6 +74,9 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
         initialProject.galleryImages ? initialProject.galleryImages.join('\n') : ''
       );
       setZipPassword(initialProject.zipPassword || '123');
+      setRequirementsText(
+        initialProject.requirements ? initialProject.requirements.join('\n') : ''
+      );
       setDescription(initialProject.description);
       setFeaturesText(initialProject.features.join('\n'));
       setInstallation(initialProject.installation);
@@ -94,6 +98,7 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
       setYoutubeVideoUrl('');
       setGalleryImagesText('');
       setZipPassword('123');
+      setRequirementsText('');
       setDescription('');
       setFeaturesText('');
       setInstallation('');
@@ -133,6 +138,11 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
       ? rawGallery 
       : [bannerImage.trim() || PRESET_BANNERS[0].url];
 
+    const requirements = requirementsText
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean);
+
     const projectData: Partial<Project> = {
       ...(initialProject ? { id: initialProject.id } : {}),
       title: title.trim(),
@@ -149,6 +159,8 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
       youtubeVideoUrl: youtubeVideoUrl.trim() || undefined,
       galleryImages,
       zipPassword: zipPassword.trim() || '123',
+      requirements: requirements.length > 0 ? requirements : (initialProject?.requirements || undefined),
+      requiredMods: initialProject?.requiredMods,
       description: description.trim(),
       features,
       installation: installation.trim(),
@@ -456,6 +468,21 @@ export const AddEditProjectModal: React.FC<AddEditProjectModalProps> = ({
               value={featuresText}
               onChange={(e) => setFeaturesText(e.target.value)}
               placeholder="7 celestial floating islands&#10;Custom loot chests&#10;Vanilla survival ready"
+              className="w-full px-3.5 py-2 text-xs sm:text-sm bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 font-mono resize-y"
+            />
+          </div>
+
+          {/* Installation Requirements */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+              <span>Installation Requirements & Dependencies (One per line)</span>
+              <span className="text-[10px] text-slate-400">Shown in the download popup & details</span>
+            </label>
+            <textarea
+              rows={2}
+              value={requirementsText}
+              onChange={(e) => setRequirementsText(e.target.value)}
+              placeholder="Minecraft Java Edition&#10;VexBot Mod (Sparring & duel routines)&#10;Archive tool supporting password-protected ZIP"
               className="w-full px-3.5 py-2 text-xs sm:text-sm bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 font-mono resize-y"
             />
           </div>

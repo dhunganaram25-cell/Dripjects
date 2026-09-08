@@ -6,12 +6,14 @@ import {
   Calendar, 
   Check, 
   CheckCircle2, 
-  Info,
-  Code2,
-  Cpu,
-  Share2,
-  KeyRound,
-  ExternalLink
+  Info, 
+  Code2, 
+  Cpu, 
+  Share2, 
+  KeyRound, 
+  ExternalLink,
+  AlertCircle,
+  FileCheck2
 } from 'lucide-react';
 import { Project } from '../types';
 import { ProjectMediaCover } from './ProjectMediaCover';
@@ -326,13 +328,63 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             )}
 
             {activeTab === 'installation' && (
-              <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  <Info className="w-4 h-4" />
-                  <span>How to Install & Play</span>
+              <div className="space-y-4">
+                {/* Requirements & Dependencies */}
+                <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/30 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Installation Requirements & Dependencies</span>
+                  </div>
+
+                  {project.requiredMods && project.requiredMods.length > 0 && (
+                    <div className="space-y-2">
+                      {project.requiredMods.map((mod, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+                          <div>
+                            <span className="font-bold text-white">{mod.name}</span>
+                            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold uppercase">
+                              Required
+                            </span>
+                            {mod.description && (
+                              <p className="text-[11px] text-slate-400 mt-0.5">{mod.description}</p>
+                            )}
+                          </div>
+                          {mod.url && (
+                            <a
+                              href={mod.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/30 rounded-lg transition-colors"
+                            >
+                              <span>Get Mod</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {project.requirements && project.requirements.length > 0 ? (
+                    <div className="space-y-1 pt-1">
+                      {project.requirements.map((req, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-slate-300">
+                          <FileCheck2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>{req}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-                <div className="text-xs sm:text-sm text-slate-300 font-mono whitespace-pre-line leading-relaxed">
-                  {project.installation || "Simply download the file, unlock with password, and extract into your Minecraft saves directory."}
+
+                <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    <Info className="w-4 h-4" />
+                    <span>How to Install & Play</span>
+                  </div>
+                  <div className="text-xs sm:text-sm text-slate-300 font-mono whitespace-pre-line leading-relaxed">
+                    {project.installation || "Simply download the file, unlock with password, and extract into your Minecraft saves directory."}
+                  </div>
                 </div>
               </div>
             )}

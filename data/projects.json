@@ -54,6 +54,11 @@
       "updatedAt": "2026-09-08T00:00:00.000Z",
       "author": "Saphal",
       "zipPassword": "123",
+      "requirements": [
+        "Minecraft Java Edition",
+        "VexBot Mod (Required for bot sparring & combat routines)",
+        "Archive extraction tool with password support (WinRAR, 7-Zip, etc.)"
+      ],
       "requiredMods": [
         {
           "name": "VexBot Mod",

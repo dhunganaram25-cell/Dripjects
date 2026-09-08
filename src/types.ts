@@ -57,6 +57,7 @@ export interface Project {
   author: string;
   tags: string[];
   zipPassword?: string;
+  requirements?: string[];
   requiredMods?: RequiredMod[];
   mirrorLinks?: MirrorLink[];
   featured?: boolean;

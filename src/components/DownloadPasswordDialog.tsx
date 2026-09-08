@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
-import { KeyRound, Copy, Check, HardDriveDownload, X, ShieldAlert, Sparkles } from 'lucide-react';
+import { 
+  KeyRound, 
+  Copy, 
+  Check, 
+  HardDriveDownload, 
+  X, 
+  Sparkles, 
+  AlertCircle, 
+  Layers, 
+  ExternalLink,
+  Cpu,
+  FileCheck2
+} from 'lucide-react';
 import { Project } from '../types';
+import { useProjectThumbnail } from '../utils/thumbnailHelper';
 
 interface DownloadPasswordDialogProps {
   project: Project | null;
@@ -22,6 +35,14 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
   // Extract password from project.zipPassword or fallback to default
   const password = project.zipPassword || '123';
 
+  // Project thumbnail with YouTube -> Gallery image fallback
+  const { 
+    src: thumbnailSrc, 
+    handleImageError, 
+    handleImageLoad, 
+    sourceType 
+  } = useProjectThumbnail(project);
+
   const handleCopyPassword = () => {
     navigator.clipboard.writeText(password);
     setCopied(true);
@@ -35,38 +56,143 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
     onClose();
   };
 
+  // Compile full requirements list
+  const requiredMods = project.requiredMods || [];
+  const textRequirements = project.requirements || [
+    `Minecraft Platform: ${project.gameVersion || 'Java Edition'}`,
+    ...(requiredMods.map(m => `${m.name} (${m.required !== false ? 'Required' : 'Optional'})`)),
+    'Archive extractor with password support (7-Zip / WinRAR)',
+  ];
+
   return (
     <div 
       className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl shadow-emerald-950/40 space-y-6 animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl shadow-emerald-950/40 space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors cursor-pointer z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Header with Key Icon */}
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-            <KeyRound className="w-6 h-6 stroke-[2.2]" />
+        {/* Project Mini Card with YouTube/Gallery Thumbnail */}
+        <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
+          <div className="relative w-20 h-14 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-700/60 shadow-md">
+            <img
+              src={thumbnailSrc}
+              alt={project.title}
+              onError={handleImageError}
+              onLoad={handleImageLoad}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover"
+            />
+            {sourceType === 'youtube' && (
+              <div className="absolute bottom-0.5 right-0.5 px-1 py-0.2 bg-red-600 rounded text-[8px] font-bold text-white uppercase tracking-wider">
+                YT
+              </div>
+            )}
           </div>
-          <div className="pr-6">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 mb-1">
-              Protected Archive
+
+          <div className="flex-1 min-w-0 pr-6">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                {project.category.replace('-', ' ')}
+              </span>
+              <span className="text-[10px] font-mono text-slate-400">
+                {project.version}
+              </span>
+              <span className="text-[10px] font-mono text-slate-400">
+                • {project.fileSize}
+              </span>
             </div>
-            <h3 className="text-xl font-extrabold text-white tracking-tight">
-              Unzip Password Required
+            <h3 className="text-base font-extrabold text-white truncate">
+              {project.title}
             </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              The archive for <strong className="text-slate-200">{project.title}</strong> is encrypted with a password.
+            <p className="text-[11px] text-slate-400 truncate">
+              By {project.author} • {project.gameVersion}
             </p>
+          </div>
+        </div>
+
+        {/* Requirements Section */}
+        <div className="p-4 rounded-2xl bg-slate-950/70 border border-amber-500/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1 rounded-lg bg-amber-500/15 text-amber-400">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                Installation Requirements & Dependencies
+              </h4>
+            </div>
+            <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+              Read Before Installing
+            </span>
+          </div>
+
+          {/* Required Mods List */}
+          {requiredMods.length > 0 ? (
+            <div className="space-y-2">
+              {requiredMods.map((mod, idx) => (
+                <div 
+                  key={idx}
+                  className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800"
+                >
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-white">
+                        {mod.name}
+                      </span>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase ${
+                        mod.required !== false 
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                          : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {mod.required !== false ? 'Required' : 'Optional'}
+                      </span>
+                    </div>
+                    {mod.description && (
+                      <p className="text-[11px] text-slate-400 leading-tight line-clamp-2">
+                        {mod.description}
+                      </p>
+                    )}
+                    {mod.version && (
+                      <span className="text-[10px] font-mono text-emerald-400 block">
+                        Version: {mod.version}
+                      </span>
+                    )}
+                  </div>
+
+                  {mod.url && (
+                    <a
+                      href={mod.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 border border-emerald-500/30 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <span>Get Mod</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Requirement Bullet Points */}
+          <div className="space-y-1.5 pt-1">
+            {textRequirements.map((req, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                <FileCheck2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span className="leading-snug">{req}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -128,3 +254,4 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
     </div>
   );
 };
+
