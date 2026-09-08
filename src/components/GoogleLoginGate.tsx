@@ -1,15 +1,16 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShieldCheck, 
   Lock, 
   Sparkles, 
-  Download, 
   CheckCircle, 
-  Settings, 
   ExternalLink, 
-  Copy,
-  Check,
-  User,
+  Mail,
   ArrowRight
 } from 'lucide-react';
 
@@ -29,8 +30,6 @@ declare global {
     google?: any;
   }
 }
-
-const DEFAULT_CLIENT_ID = '918138094861-7lpuo2q220i8194okdu6iadh47ntano8.apps.googleusercontent.com';
 
 function parseJwt(token: string) {
   try {
@@ -54,26 +53,25 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [customEmail, setCustomEmail] = useState('');
   const [showEmailInput, setShowEmailInput] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [copiedOrigin, setCopiedOrigin] = useState(false);
 
-  // Origin info
+  // Environment Google Client ID (kept strictly in env, never exposed or displayed in UI)
+  const clientId: string = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '';
+
+  // Clean up any previously cached client IDs from localStorage for security
+  useEffect(() => {
+    try {
+      localStorage.removeItem('dripjects_google_client_id');
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
-
-  // Stored or environment Google Client ID
-  const [clientId, setClientId] = useState<string>(() => {
-    return (
-      (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-      localStorage.getItem('dripjects_google_client_id') ||
-      DEFAULT_CLIENT_ID
-    );
-  });
-
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  // Initialize Google Identity Services if available and client_id is set
+  // Initialize Google Identity Services if client_id is provided in environment
   useEffect(() => {
     if (!clientId) return;
 
@@ -112,7 +110,7 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
             });
           }
         } catch (err: any) {
-          console.warn('Google GSI init notice:', err);
+          console.warn('Google GSI notice:', err);
         }
       }
     }, 250);
@@ -123,33 +121,40 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
     };
   }, [clientId, onLoginSuccess]);
 
-  // Real Google OAuth2 popup flow using Google Identity Services token client
+  // Google OAuth flow
   const handleRealGoogleOAuth = async () => {
     setErrorMessage(null);
+
+    if (!clientId) {
+      setShowEmailInput(true);
+      return;
+    }
+
     setIsSigningIn(true);
 
-    if (clientId && window.google?.accounts?.oauth2) {
+    if (window.google?.accounts?.oauth2) {
       try {
         const client = window.google.accounts.oauth2.initTokenClient({
           client_id: clientId,
           scope: 'email profile openid',
           error_callback: (error: any) => {
             setIsSigningIn(false);
-            console.warn('OAuth popup callback:', error);
+            console.warn('OAuth popup notice:', error);
             setErrorMessage(
-              'Google popup closed or origin pending in Google Cloud Console. You can enter with email or continue below.'
+              'Google sign-in was closed or cancelled. You can enter your email to continue.'
             );
+            setShowEmailInput(true);
           },
           callback: async (tokenResponse: any) => {
             if (tokenResponse.error) {
               setIsSigningIn(false);
-              setErrorMessage('Google authorization was cancelled or origin pending in Google Console.');
+              setErrorMessage('Google authorization was cancelled. You can enter your email below.');
+              setShowEmailInput(true);
               return;
             }
 
             if (tokenResponse.access_token) {
               try {
-                // Fetch verified profile from Google's userinfo API
                 const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                   headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
                 });
@@ -163,7 +168,8 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
                 localStorage.setItem('dripjects_google_user', JSON.stringify(user));
                 onLoginSuccess(user);
               } catch {
-                setErrorMessage('Failed to fetch profile from Google.');
+                setErrorMessage('Failed to retrieve user profile. Please enter your email below.');
+                setShowEmailInput(true);
               }
             }
             setIsSigningIn(false);
@@ -175,13 +181,14 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
       } catch (err: any) {
         console.error('Google OAuth init failed:', err);
         setIsSigningIn(false);
-        setErrorMessage('Google popup was blocked by browser. You can sign in directly below.');
+        setErrorMessage('Google popup was blocked. Please enter your email below.');
+        setShowEmailInput(true);
         return;
       }
     }
 
     setIsSigningIn(false);
-    setErrorMessage('Google Identity client is loading. Please try again in a moment or enter below.');
+    setShowEmailInput(true);
   };
 
   const handleCustomEmailLogin = (emailToUse: string) => {
@@ -200,22 +207,7 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
       localStorage.setItem('dripjects_google_user', JSON.stringify(user));
       onLoginSuccess(user);
       setIsSigningIn(false);
-    }, 300);
-  };
-
-  const handleSaveClientId = (newId: string) => {
-    setClientId(newId.trim());
-    localStorage.setItem('dripjects_google_client_id', newId.trim());
-    setShowConfig(false);
-    setErrorMessage(null);
-  };
-
-  const handleCopyOrigin = () => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(currentOrigin);
-      setCopiedOrigin(true);
-      setTimeout(() => setCopiedOrigin(false), 2000);
-    }
+    }, 250);
   };
 
   return (
@@ -241,19 +233,9 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowConfig(!showConfig)}
-              className="p-1.5 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1.5"
-              title="OAuth Settings"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">OAuth Settings</span>
-            </button>
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="hidden sm:inline">Authentication Required</span>
-            </div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline">Authentication Required</span>
           </div>
         </div>
       </header>
@@ -304,8 +286,10 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
             </div>
           )}
 
-          {/* Official Google GSI Rendered Button */}
-          <div className="flex justify-center" ref={googleBtnRef} />
+          {/* Official Google GSI Rendered Button if Client ID exists */}
+          {clientId && (
+            <div className="flex justify-center" ref={googleBtnRef} />
+          )}
 
           {/* Action Buttons */}
           <div className="space-y-2.5">
@@ -338,103 +322,42 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
             </button>
           </div>
 
-          {/* Email input toggle */}
+          {/* Email input option */}
           {!showEmailInput ? (
             <button
               type="button"
               onClick={() => setShowEmailInput(true)}
               className="w-full text-center text-xs text-slate-400 hover:text-slate-200 transition-colors py-0.5 cursor-pointer block"
             >
-              Or enter your email address
+              Or enter with email address
             </button>
           ) : (
             <div className="pt-2 space-y-2 border-t border-slate-800">
-              <label className="text-[11px] text-slate-400 block">
-                Enter your email address:
+              <label className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Enter your email address:</span>
               </label>
               <div className="flex gap-2">
                 <input
                   type="email"
                   value={customEmail}
                   onChange={(e) => setCustomEmail(e.target.value)}
-                  placeholder="yourname@gmail.com"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && customEmail.includes('@')) {
+                      handleCustomEmailLogin(customEmail);
+                    }
+                  }}
+                  placeholder="name@example.com"
                   className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                  autoFocus
                 />
                 <button
                   onClick={() => handleCustomEmailLogin(customEmail)}
                   disabled={!customEmail.includes('@')}
-                  className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                  className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                 >
-                  Enter
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Config Drawer for Google Cloud Console */}
-          {showConfig && (
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-700/80 space-y-3 animate-in fade-in">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
-                <span>Google Cloud Console Settings</span>
-                <a
-                  href="https://console.cloud.google.com/apis/credentials"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white"
-                >
-                  <span>Console</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                  Origin for this app:
-                </label>
-                <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-mono text-emerald-400">
-                  <span className="truncate">{currentOrigin}</span>
-                  <button
-                    onClick={handleCopyOrigin}
-                    className="p-1 text-slate-300 hover:text-white shrink-0 cursor-pointer"
-                    title="Copy Origin"
-                  >
-                    {copiedOrigin ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-400">
-                  Tip: In Google Cloud Console, enter <code className="text-emerald-400">https://dripjects.vercel.app</code> without a trailing slash.
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                  Client ID:
-                </label>
-                <input
-                  type="text"
-                  defaultValue={clientId}
-                  id="oauth-client-id-input"
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowConfig(false)}
-                  className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const input = document.getElementById('oauth-client-id-input') as HTMLInputElement;
-                    if (input) handleSaveClientId(input.value);
-                  }}
-                  className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer"
-                >
-                  Save
+                  <span>Continue</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -444,11 +367,11 @@ export const GoogleLoginGate: React.FC<GoogleLoginGateProps> = ({
           <div className="pt-3 border-t border-slate-800/80 space-y-1.5 text-[11px] text-slate-400">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Google Identity Services 2.0 Integration</span>
+              <span>Secure authentication</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Zero credentials stored on servers</span>
+              <span>Access community creations & direct downloads</span>
             </div>
           </div>
         </div>

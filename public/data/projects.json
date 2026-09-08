@@ -25,8 +25,7 @@
       "youtubeVideoUrl": "https://youtu.be/tf4zaQ_-m0g",
       "galleryImages": [
         "/assets/pvpprac_gallery1.webp",
-        "/assets/pvpprac_gallery2.webp",
-        "/assets/pvpprac1.0beta.png"
+        "/assets/pvpprac_gallery2.webp"
       ],
       "description": "Requires vexbot mod and is totally opensource.\n\nCustom PvP practice map designed for combat training, bot duel sparring, weapon combos, and movement drills.",
       "features": [
