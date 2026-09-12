@@ -139,6 +139,20 @@ function computeDirectDownloadUrl(googleDriveUrl: string): string {
   return googleDriveUrl;
 }
 
+// Helper to extract YouTube video ID
+function extractYouTubeId(url?: string): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  try {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/;
+    const match = trimmed.match(regex);
+    return match && match[1] ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 // API Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', app: 'Dripjects' });
@@ -354,6 +368,39 @@ app.post('/api/projects/:id/diamond', async (req, res) => {
     diamonds: project.diamonds, 
     totalDiamonds: priv?.stats?.totalDiamonds || project.diamonds 
   });
+});
+
+// POST force sync YouTube thumbnail for a project
+app.post('/api/projects/:id/sync-thumbnail', async (req, res) => {
+  const { id } = req.params;
+  const projects = await loadProjects();
+  const project = projects.find((p: any) => p.id === id || p.slug === id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const now = new Date().toISOString();
+  project.updatedAt = now;
+
+  // Mirror newest thumbnail from YouTube to local assets
+  const videoId = extractYouTubeId(project.youtubeVideoUrl);
+  if (videoId) {
+    try {
+      const fetchResp = await fetch(`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`);
+      if (fetchResp.ok) {
+        const buffer = await fetchResp.arrayBuffer();
+        const assetsDir = path.join(process.cwd(), 'public', 'assets');
+        if (!fs.existsSync(assetsDir)) {
+          fs.mkdirSync(assetsDir, { recursive: true });
+        }
+        await fs.promises.writeFile(path.join(assetsDir, 'pvpprac1.0beta.png'), Buffer.from(buffer));
+        await fs.promises.writeFile(path.join(assetsDir, 'pvpprac1.0beta.jpg'), Buffer.from(buffer));
+      }
+    } catch (e) {
+      console.warn('Could not mirror thumbnail to public/assets:', e);
+    }
+  }
+
+  await saveProjects(projects);
+  res.json({ success: true, timestamp: Date.now(), project });
 });
 
 // POST sync whole database (backward compatibility)

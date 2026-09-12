@@ -12,14 +12,55 @@ export interface ThumbnailCandidate {
   sourceType: 'youtube' | 'gallery' | 'banner' | 'fallback';
 }
 
+export const THUMBNAIL_SYNC_EVENT = 'dripjects:thumbnail-sync';
+
 /**
- * Generates an ordered list of thumbnail candidates according to user rule:
- * 1. YouTube link thumbnail (maxres, then hq)
+ * Dispatches an event to all thumbnail listeners and updates localStorage
+ * to immediately bust client-side image cache across all cards and modals.
+ */
+export function triggerThumbnailSync(timestamp: number = Date.now()) {
+  try {
+    localStorage.setItem('dripjects_yt_thumb_buster', String(timestamp));
+    window.dispatchEvent(new CustomEvent(THUMBNAIL_SYNC_EVENT, { detail: timestamp }));
+  } catch (err) {
+    console.error('Failed to trigger thumbnail sync event:', err);
+  }
+}
+
+/**
+ * Triggers both a client cache-buster and calls the server to download the
+ * newest YouTube thumbnail to the local public assets folder.
+ */
+export async function syncProjectThumbnail(project: Project): Promise<{ success: boolean; timestamp: number }> {
+  const ts = Date.now();
+  triggerThumbnailSync(ts);
+
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(project.id)}/sync-thumbnail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const finalTs = data.timestamp || ts;
+      triggerThumbnailSync(finalTs);
+      return { success: true, timestamp: finalTs };
+    }
+  } catch (err) {
+    console.warn('Backend sync endpoint unavailable; client-side cache buster applied:', err);
+  }
+
+  return { success: true, timestamp: ts };
+}
+
+/**
+ * Generates an ordered list of thumbnail candidates:
+ * 1. YouTube link thumbnail (maxres, hq, sd, mq with cache-busting)
  * 2. If not working, gallery images (in order)
  * 3. Fallback banner image
  * 4. Default asset
  */
-export function getProjectThumbnailCandidates(project: Project): ThumbnailCandidate[] {
+export function getProjectThumbnailCandidates(project: Project, cacheBuster?: string | number): ThumbnailCandidate[] {
   const candidates: ThumbnailCandidate[] = [];
   const seenUrls = new Set<string>();
 
@@ -31,17 +72,20 @@ export function getProjectThumbnailCandidates(project: Project): ThumbnailCandid
     candidates.push({ url: trimmed, sourceType });
   };
 
-  // 1. YouTube video thumbnail (Priority 1)
+  // 1. YouTube video thumbnail (Priority 1) with cache buster to force freshness from YouTube
   const videoId = extractYouTubeId(project.youtubeVideoUrl);
   if (videoId) {
-    const yt = getYouTubeThumbnails(videoId);
+    const buster = cacheBuster || (project.updatedAt ? new Date(project.updatedAt).getTime() : 1789181607000);
+    const yt = getYouTubeThumbnails(videoId, buster);
     addCandidate(yt.maxres, 'youtube');
     addCandidate(yt.hq, 'youtube');
+    addCandidate(yt.sd, 'youtube');
+    addCandidate(yt.mq, 'youtube');
     addCandidate(yt.fallbackMaxres, 'youtube');
     addCandidate(yt.fallbackHq, 'youtube');
   }
 
-  // 2. Gallery images (Priority 2: If YouTube link is not working or not present)
+  // 2. Gallery images (Priority 2)
   if (project.galleryImages && Array.isArray(project.galleryImages)) {
     for (const imgUrl of project.galleryImages) {
       addCandidate(imgUrl, 'gallery');
@@ -58,24 +102,45 @@ export function getProjectThumbnailCandidates(project: Project): ThumbnailCandid
 }
 
 /**
- * Custom React Hook to manage thumbnail loading with automatic fallbacks:
+ * Custom React Hook to manage thumbnail loading with automatic fallbacks & cache-busting:
  * YouTube -> Gallery Image -> Banner -> Fallback
  */
-export function useProjectThumbnail(project: Project) {
-  const candidates = useMemo(() => getProjectThumbnailCandidates(project), [
-    project.youtubeVideoUrl,
-    project.galleryImages,
-    project.bannerImage,
-  ]);
+export function useProjectThumbnail(project: Project, manualCacheBuster?: string | number) {
+  const [syncTimestamp, setSyncTimestamp] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('dripjects_yt_thumb_buster');
+      if (stored) return parseInt(stored, 10);
+    } catch {}
+    return project.updatedAt ? new Date(project.updatedAt).getTime() : 1789181607000;
+  });
 
   const [candidateIndex, setCandidateIndex] = useState(0);
   const [hasFailedAll, setHasFailedAll] = useState(false);
 
-  // Reset index when project changes
+  // Listen for global thumbnail sync events
+  useEffect(() => {
+    const handleSync = (e: any) => {
+      const ts = e?.detail || Date.now();
+      setSyncTimestamp(ts);
+      setCandidateIndex(0);
+      setHasFailedAll(false);
+    };
+    window.addEventListener(THUMBNAIL_SYNC_EVENT, handleSync);
+    return () => window.removeEventListener(THUMBNAIL_SYNC_EVENT, handleSync);
+  }, []);
+
+  // Reset index when project or video changes
   useEffect(() => {
     setCandidateIndex(0);
     setHasFailedAll(false);
-  }, [project.id, project.youtubeVideoUrl, project.bannerImage]);
+  }, [project.id, project.youtubeVideoUrl, project.bannerImage, project.updatedAt]);
+
+  const activeBuster = manualCacheBuster || syncTimestamp;
+
+  const candidates = useMemo(
+    () => getProjectThumbnailCandidates(project, activeBuster),
+    [project.youtubeVideoUrl, project.galleryImages, project.bannerImage, project.updatedAt, activeBuster]
+  );
 
   const currentCandidate = candidates[candidateIndex] || candidates[candidates.length - 1];
 
@@ -114,5 +179,6 @@ export function useProjectThumbnail(project: Project) {
     handleImageError,
     handleImageLoad,
     candidateIndex,
+    syncTimestamp,
   };
 }

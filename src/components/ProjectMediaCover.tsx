@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Volume2, Maximize2, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { Play, Volume2, Maximize2, ExternalLink, Image as ImageIcon, RefreshCw, Check } from 'lucide-react';
 import { Project } from '../types';
 import { extractYouTubeId, getYouTubePreviewEmbedUrl, getYouTubeFullEmbedUrl } from '../utils/youtube';
-import { useProjectThumbnail } from '../utils/thumbnailHelper';
+import { useProjectThumbnail, syncProjectThumbnail } from '../utils/thumbnailHelper';
 
 interface ProjectMediaCoverProps {
   project: Project;
@@ -26,6 +26,8 @@ export const ProjectMediaCover: React.FC<ProjectMediaCoverProps> = ({
   const [isPlayingFull, setIsPlayingFull] = useState(false);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isPreviewActive, setIsPreviewActive] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [justSynced, setJustSynced] = useState(false);
 
   const videoId = extractYouTubeId(project.youtubeVideoUrl);
   const { 
@@ -35,6 +37,19 @@ export const ProjectMediaCover: React.FC<ProjectMediaCoverProps> = ({
     handleImageError, 
     handleImageLoad 
   } = useProjectThumbnail(project);
+
+  const handleSyncThumbnail = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await syncProjectThumbnail(project);
+      setJustSynced(true);
+      setTimeout(() => setJustSynced(false), 2000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Handle hover debounce (start preview after 250ms of hovering if videoId exists)
   const handleMouseEnter = () => {
@@ -82,6 +97,30 @@ export const ProjectMediaCover: React.FC<ProjectMediaCoverProps> = ({
 
         {/* Gradient Vignette overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
+
+        {/* YouTube Sync Button (forces cache-busting from YouTube Studio) */}
+        {videoId && (
+          <div className="absolute top-3 left-3 z-20 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+            <button
+              type="button"
+              onClick={handleSyncThumbnail}
+              title="Force sync latest thumbnail from YouTube Studio"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-900 text-slate-300 hover:text-emerald-400 text-[11px] font-semibold border border-slate-700/80 backdrop-blur-md transition-all cursor-pointer shadow-lg"
+            >
+              {justSynced ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  <span className="text-emerald-400 font-bold">Synced!</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-emerald-400' : 'text-slate-400'}`} />
+                  <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Sync Thumbnail'}</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* YouTube Video Badge */}
         {videoId && (

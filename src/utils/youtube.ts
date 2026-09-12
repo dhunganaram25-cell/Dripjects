@@ -31,15 +31,19 @@ export function extractYouTubeId(url?: string): string | null {
 }
 
 /**
- * Returns high quality and max-res thumbnails for a YouTube video using YouTube's official i.ytimg.com CDN
+ * Returns high quality and max-res thumbnails for a YouTube video using YouTube's official i.ytimg.com CDN.
+ * Accepts an optional cacheBuster (timestamp or hash) to bypass browser and CDN edge caching
+ * whenever the creator updates their thumbnail on YouTube.
  */
-export function getYouTubeThumbnails(videoId: string) {
+export function getYouTubeThumbnails(videoId: string, cacheBuster?: string | number) {
+  const query = cacheBuster ? `?v=${encodeURIComponent(cacheBuster)}` : '';
   return {
-    maxres: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
-    hq: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-    mq: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
-    fallbackMaxres: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-    fallbackHq: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+    maxres: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg${query}`,
+    hq: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg${query}`,
+    sd: `https://i.ytimg.com/vi/${videoId}/sddefault.jpg${query}`,
+    mq: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg${query}`,
+    fallbackMaxres: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg${query}`,
+    fallbackHq: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg${query}`,
   };
 }
 

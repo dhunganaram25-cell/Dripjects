@@ -15,11 +15,13 @@ import {
   GitBranch, 
   ArrowRight, 
   Sparkles,
-  Tag
+  Tag,
+  RefreshCw
 } from 'lucide-react';
 import { Project, ProjectVersion } from '../types';
 import { ProjectMediaCover } from './ProjectMediaCover';
 import { ProjectImageGallery } from './ProjectImageGallery';
+import { syncProjectThumbnail } from '../utils/thumbnailHelper';
 
 interface ProjectDetailModalProps {
   project: Project | null;
@@ -45,6 +47,20 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'versions' | 'gallery' | 'features' | 'installation' | 'changelog'>(initialTab);
   const [copiedShare, setCopiedShare] = useState(false);
   const [copiedPass, setCopiedPass] = useState(false);
+  const [isSyncingThumb, setIsSyncingThumb] = useState(false);
+  const [justSyncedThumb, setJustSyncedThumb] = useState(false);
+
+  const handleSyncThumbnail = async () => {
+    if (isSyncingThumb) return;
+    setIsSyncingThumb(true);
+    try {
+      await syncProjectThumbnail(project);
+      setJustSyncedThumb(true);
+      setTimeout(() => setJustSyncedThumb(false), 2200);
+    } finally {
+      setIsSyncingThumb(false);
+    }
+  };
 
   useEffect(() => {
     if (initialTab) {
@@ -114,6 +130,29 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Sync Thumbnail from YouTube button */}
+            {project.youtubeVideoUrl && (
+              <button
+                type="button"
+                onClick={handleSyncThumbnail}
+                disabled={isSyncingThumb}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-emerald-400 border border-slate-700/80 transition-all cursor-pointer"
+                title="Sync and force-refresh the newest thumbnail directly from YouTube"
+              >
+                {justSyncedThumb ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 font-bold">Thumbnail Synced!</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingThumb ? 'animate-spin text-emerald-400' : 'text-slate-400'}`} />
+                    <span className="hidden sm:inline">{isSyncingThumb ? 'Syncing...' : 'Sync Thumbnail'}</span>
+                  </>
+                )}
+              </button>
+            )}
+
             {/* Custom Share Button */}
             <button
               id="modal-share-project-btn"
