@@ -72,6 +72,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             aspectRatio="video" 
             className="h-full w-full rounded-none" 
             allowWatchFull={false}
+            isCardPreview={true}
           />
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-950/80 backdrop-blur-sm text-slate-200 z-10 pointer-events-none">
             {project.category.replace('-', ' ')}
@@ -189,6 +190,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           aspectRatio="video" 
           className="rounded-none w-full" 
           allowWatchFull={false}
+          isCardPreview={true}
         />
 
         {/* Top Badges */}

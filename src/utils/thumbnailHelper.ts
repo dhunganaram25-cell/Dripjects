@@ -55,10 +55,10 @@ export async function syncProjectThumbnail(project: Project): Promise<{ success:
 
 /**
  * Generates an ordered list of thumbnail candidates:
- * 1. YouTube link thumbnail (maxres, hq, sd, mq with cache-busting)
- * 2. If not working, gallery images (in order)
- * 3. Fallback banner image
- * 4. Default asset
+ * 1. User's Chosen Picture (project.bannerImage) - Priority 1
+ * 2. Gallery images (Priority 2)
+ * 3. YouTube link thumbnail (Fallback)
+ * 4. Default asset fallback
  */
 export function getProjectThumbnailCandidates(project: Project, cacheBuster?: string | number): ThumbnailCandidate[] {
   const candidates: ThumbnailCandidate[] = [];
@@ -72,7 +72,17 @@ export function getProjectThumbnailCandidates(project: Project, cacheBuster?: st
     candidates.push({ url: trimmed, sourceType });
   };
 
-  // 1. YouTube video thumbnail (Priority 1) with cache buster to force freshness from YouTube
+  // 1. User's chosen picture (Priority 1) - Ensures chosen image loads first!
+  addCandidate(project.bannerImage, 'banner');
+
+  // 2. Gallery images (Priority 2)
+  if (project.galleryImages && Array.isArray(project.galleryImages)) {
+    for (const imgUrl of project.galleryImages) {
+      addCandidate(imgUrl, 'gallery');
+    }
+  }
+
+  // 3. YouTube video thumbnail (Fallback if custom image fails or isn't provided)
   const videoId = extractYouTubeId(project.youtubeVideoUrl);
   if (videoId) {
     const buster = cacheBuster || (project.updatedAt ? new Date(project.updatedAt).getTime() : 1789181607000);
@@ -84,16 +94,6 @@ export function getProjectThumbnailCandidates(project: Project, cacheBuster?: st
     addCandidate(yt.fallbackMaxres, 'youtube');
     addCandidate(yt.fallbackHq, 'youtube');
   }
-
-  // 2. Gallery images (Priority 2)
-  if (project.galleryImages && Array.isArray(project.galleryImages)) {
-    for (const imgUrl of project.galleryImages) {
-      addCandidate(imgUrl, 'gallery');
-    }
-  }
-
-  // 3. Fallback Banner image
-  addCandidate(project.bannerImage, 'banner');
 
   // 4. Default fallback image
   addCandidate('/assets/pvpprac1.0beta.png', 'fallback');
@@ -181,4 +181,68 @@ export function useProjectThumbnail(project: Project, manualCacheBuster?: string
     candidateIndex,
     syncTimestamp,
   };
+}
+
+/**
+ * Updates a project's thumbnail picture and ensures it is added to the gallery as well.
+ * Persists changes to the server and localStorage, then broadcasts the change across the app.
+ */
+export async function updateProjectThumbnailAndGallery(
+  project: Project,
+  imageUrl: string,
+  base64Data?: string,
+  fileName?: string
+): Promise<{ success: boolean; project: Project; finalUrl: string }> {
+  let finalUrl = imageUrl;
+  const ts = Date.now();
+
+  // 1. Try dedicated server endpoint
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(project.id)}/thumbnail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageUrl,
+        imageBase64: base64Data,
+        fileName,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.project) {
+        triggerThumbnailSync(ts);
+        return { success: true, project: data.project, finalUrl: data.finalUrl || imageUrl };
+      }
+    }
+  } catch (err) {
+    console.warn('Backend thumbnail endpoint error, applying client-side fallback:', err);
+  }
+
+  // 2. Client-side fallback update
+  const newGallery = Array.isArray(project.galleryImages) ? [...project.galleryImages] : [];
+  if (!newGallery.includes(finalUrl)) {
+    newGallery.unshift(finalUrl);
+  }
+
+  const updatedProject: Project = {
+    ...project,
+    bannerImage: finalUrl,
+    galleryImages: newGallery,
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    await fetch(`/api/projects/${encodeURIComponent(project.id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bannerImage: finalUrl,
+        galleryImages: newGallery,
+      }),
+    });
+  } catch {}
+
+  triggerThumbnailSync(ts);
+  return { success: true, project: updatedProject, finalUrl };
 }

@@ -267,6 +267,18 @@ export default function App() {
     }
   };
 
+  // Handler: Update Project state when thumbnail or details change
+  const handleUpdateProject = (updated: Project) => {
+    setDatabase(prev => ({
+      ...prev,
+      projects: prev.projects.map(p => (p.id === updated.id ? updated : p))
+    }));
+    if (selectedProject?.id === updated.id) {
+      setSelectedProject(updated);
+    }
+    showNotification(`Thumbnail updated for ${updated.title} and added to gallery!`);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Public Sticky Navigation Header */}
@@ -395,6 +407,7 @@ export default function App() {
           handleCloseProjectModal();
         }}
         onTabChange={handleTabChange}
+        onUpdateProject={handleUpdateProject}
       />
 
       {/* Password Dialog (shown before unzipping/downloading) */}

@@ -10,7 +10,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'projects.json');
@@ -283,9 +284,18 @@ app.put('/api/projects/:id', async (req, res) => {
   const driveUrl = updatedFields.googleDriveUrl !== undefined ? updatedFields.googleDriveUrl : projects[idx].googleDriveUrl;
   const directDownloadUrl = driveUrl ? computeDirectDownloadUrl(driveUrl) : projects[idx].directDownloadUrl;
 
+  const currentGallery: string[] = Array.isArray(projects[idx].galleryImages) ? [...projects[idx].galleryImages] : [];
+  if (updatedFields.galleryImages && Array.isArray(updatedFields.galleryImages)) {
+    currentGallery.splice(0, currentGallery.length, ...updatedFields.galleryImages);
+  }
+  if (updatedFields.bannerImage && !currentGallery.includes(updatedFields.bannerImage)) {
+    currentGallery.unshift(updatedFields.bannerImage);
+  }
+
   projects[idx] = {
     ...projects[idx],
     ...updatedFields,
+    galleryImages: currentGallery,
     id: projects[idx].id, // protect id
     googleDriveUrl: driveUrl,
     directDownloadUrl,
@@ -294,6 +304,65 @@ app.put('/api/projects/:id', async (req, res) => {
 
   await saveProjects(projects);
   res.json({ success: true, project: projects[idx] });
+});
+
+// POST choose & set project thumbnail picture (and add to gallery)
+app.post('/api/projects/:id/thumbnail', async (req, res) => {
+  const { id } = req.params;
+  const { imageUrl, imageBase64, fileName } = req.body;
+  const projects = await loadProjects();
+  const project = projects.find((p: any) => p.id === id || p.slug === id);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  let finalUrl = imageUrl;
+
+  // If a base64 image file was uploaded, save it to public/assets/uploads/
+  if (imageBase64) {
+    try {
+      const uploadsDir = path.join(process.cwd(), 'public', 'assets', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      let ext = '.png';
+      if (fileName && path.extname(fileName)) {
+        ext = path.extname(fileName);
+      } else if (imageBase64.startsWith('data:image/jpeg') || imageBase64.startsWith('data:image/jpg')) {
+        ext = '.jpg';
+      } else if (imageBase64.startsWith('data:image/webp')) {
+        ext = '.webp';
+      } else if (imageBase64.startsWith('data:image/gif')) {
+        ext = '.gif';
+      }
+
+      const safeFileName = `thumb-${Date.now()}${ext}`;
+      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+      await fs.promises.writeFile(path.join(uploadsDir, safeFileName), Buffer.from(base64Data, 'base64'));
+      finalUrl = `/assets/uploads/${safeFileName}`;
+    } catch (err) {
+      console.error('Failed to write uploaded thumbnail file to disk:', err);
+      finalUrl = imageBase64; // fallback to data URL
+    }
+  }
+
+  if (!finalUrl) {
+    return res.status(400).json({ error: 'No image URL or base64 provided' });
+  }
+
+  // Update thumbnail
+  project.bannerImage = finalUrl;
+
+  // Add to gallery as well
+  if (!Array.isArray(project.galleryImages)) {
+    project.galleryImages = [];
+  }
+  if (!project.galleryImages.includes(finalUrl)) {
+    project.galleryImages.unshift(finalUrl);
+  }
+
+  project.updatedAt = new Date().toISOString();
+
+  await saveProjects(projects);
+  res.json({ success: true, project, finalUrl });
 });
 
 // DELETE project

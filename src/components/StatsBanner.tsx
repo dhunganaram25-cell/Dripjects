@@ -69,6 +69,7 @@ export const StatsBanner: React.FC<StatsBannerProps> = ({
                   aspectRatio="video"
                   className="rounded-none w-full"
                   allowWatchFull={false}
+                  isCardPreview={true}
                 />
                 <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-emerald-500 text-slate-950 font-bold text-[11px] uppercase tracking-wider shadow z-20 pointer-events-none">
                   Featured Map

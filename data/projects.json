@@ -17,6 +17,7 @@
       "bannerImage": "/assets/pvpprac1.0beta.png",
       "youtubeVideoUrl": "https://youtu.be/tf4zaQ_-m0g",
       "galleryImages": [
+        "/assets/pvpprac1.0beta.png",
         "/assets/pvpprac_gallery1.webp",
         "/assets/pvpprac_gallery2.webp"
       ],
@@ -67,7 +68,7 @@
       "downloads": 129,
       "views": 640,
       "createdAt": "2026-09-08T00:00:00.000Z",
-      "updatedAt": "2026-09-12T03:17:57.718Z",
+      "updatedAt": "2026-09-12T03:28:37.076Z",
       "author": "ItzDrifter",
       "zipPassword": "123",
       "requirements": [
