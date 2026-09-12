@@ -1,14 +1,19 @@
 import React from 'react';
-import { Search, SlidersHorizontal, Grid, List, Sparkles } from 'lucide-react';
+import { Search, SlidersHorizontal, Grid, List, Sparkles, Tag, X } from 'lucide-react';
 import { ProjectCategory } from '../types';
+
+export type SortOption = 'newest' | 'title' | 'title-desc';
 
 interface FilterBarProps {
   selectedCategory: ProjectCategory;
   onSelectCategory: (category: ProjectCategory) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  sortBy: 'downloads' | 'newest' | 'diamonds' | 'title';
-  onSortChange: (sort: 'downloads' | 'newest' | 'diamonds' | 'title') => void;
+  selectedTag?: string | null;
+  onClearTag?: () => void;
+  categoryCounts?: Record<string, number>;
+  sortBy: SortOption;
+  onSortChange: (sort: SortOption) => void;
   viewMode: 'grid' | 'list';
   onViewModeChange: (mode: 'grid' | 'list') => void;
   totalResults: number;
@@ -30,6 +35,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onSelectCategory,
   searchQuery,
   onSearchChange,
+  selectedTag,
+  onClearTag,
+  categoryCounts = {},
   sortBy,
   onSortChange,
   viewMode,
@@ -48,13 +56,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search projects, tags, game versions, features..."
+            placeholder="Search projects by name, tags (#pvp), features..."
             className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-900/90 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 transition-colors"
             >
               Clear
             </button>
@@ -69,13 +78,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <select
               id="sort-projects-select"
               value={sortBy}
-              onChange={(e) => onSortChange(e.target.value as any)}
+              onChange={(e) => onSortChange(e.target.value as SortOption)}
               className="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer"
             >
-              <option value="downloads" className="bg-slate-900 text-slate-200">Most Downloaded</option>
               <option value="newest" className="bg-slate-900 text-slate-200">Newest Releases</option>
-              <option value="diamonds" className="bg-slate-900 text-slate-200">Most Diamonds</option>
               <option value="title" className="bg-slate-900 text-slate-200">Alphabetical (A-Z)</option>
+              <option value="title-desc" className="bg-slate-900 text-slate-200">Alphabetical (Z-A)</option>
             </select>
           </div>
 
@@ -83,8 +91,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-xl p-0.5">
             <button
               id="view-mode-grid"
+              type="button"
               onClick={() => onViewModeChange('grid')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors cursor-pointer ${
                 viewMode === 'grid'
                   ? 'bg-emerald-500/20 text-emerald-400'
                   : 'text-slate-400 hover:text-slate-200'
@@ -95,8 +104,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </button>
             <button
               id="view-mode-list"
+              type="button"
               onClick={() => onViewModeChange('list')}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-2 rounded-lg transition-colors cursor-pointer ${
                 viewMode === 'list'
                   ? 'bg-emerald-500/20 text-emerald-400'
                   : 'text-slate-400 hover:text-slate-200'
@@ -113,23 +123,55 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-800">
         {CATEGORIES.map((cat) => {
           const isActive = selectedCategory === cat.id;
+          const count = cat.id === 'all' 
+            ? Object.values(categoryCounts).reduce<number>((sum, val) => sum + (Number(val) || 0), 0)
+            : (categoryCounts[cat.id] || 0);
+
           return (
             <button
               key={cat.id}
               id={`filter-category-${cat.id}`}
+              type="button"
               onClick={() => onSelectCategory(cat.id)}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'bg-slate-900/80 hover:bg-slate-800/80 text-slate-300 border border-slate-800/80'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                  : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-800'
               }`}
             >
               <span>{cat.icon}</span>
               <span>{cat.label}</span>
+              {count > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  isActive ? 'bg-slate-950/20 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400 font-normal'
+                }`}>
+                  {count}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+
+      {/* Active Tag Filter indicator row */}
+      {selectedTag && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 animate-in fade-in duration-150">
+          <Tag className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Active Tag Filter:</span>
+          <span className="font-mono font-bold bg-emerald-500/20 px-2 py-0.5 rounded text-white">
+            #{selectedTag}
+          </span>
+          <button
+            type="button"
+            onClick={onClearTag}
+            className="ml-auto flex items-center gap-1 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 px-2 py-0.5 rounded-md transition-colors cursor-pointer text-[11px]"
+            title="Clear tag filter"
+          >
+            <X className="w-3 h-3" />
+            <span>Clear Tag</span>
+          </button>
+        </div>
+      )}
 
       {/* Results Count & Drive Download Notice */}
       <div className="flex items-center justify-between text-xs text-slate-400 px-1">
@@ -138,9 +180,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
         <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-emerald-400/90">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Clicking download immediately triggers the Google Drive file download</span>
+          <span>Google Drive direct link & auto-copied unzip password</span>
         </div>
       </div>
     </div>
   );
 };
+

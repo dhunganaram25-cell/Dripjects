@@ -93,14 +93,31 @@ export function triggerDirectDownload(url: string, fileName?: string): void {
   }
 
   // Create an anchor element and click it
-  const link = document.createElement('a');
-  link.href = downloadUrl;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  if (fileName) {
-    link.download = fileName;
+  try {
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    if (fileName) {
+      link.download = fileName;
+    }
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      try {
+        if (link.parentNode) {
+          link.parentNode.removeChild(link);
+        }
+      } catch {
+        // ignore cleanup error
+      }
+    }, 200);
+  } catch (err) {
+    console.error('Download trigger error:', err);
+    try {
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      window.location.href = downloadUrl;
+    }
   }
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 }

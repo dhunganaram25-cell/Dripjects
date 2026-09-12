@@ -1,20 +1,13 @@
 {
-  "metadata": {
-    "appName": "Dripjects",
-    "owner": "ItzDrifter (Creator)",
-    "lastUpdated": "2026-09-08T09:12:00.000Z",
-    "version": "1.0.1",
-    "totalProjects": 1,
-    "totalDownloads": 128,
-    "totalDiamonds": 42
-  },
   "projects": [
     {
-      "id": "pvp-practice-1-0-beta",
-      "title": "Pvp_Practice 1.0 Beta",
+      "id": "pvp-practice",
+      "slug": "pvp-practice",
+      "title": "Pvp_Practice",
       "tagline": "Custom PvP practice map — Requires VexBot mod and is totally open source.",
       "category": "maps",
       "version": "1.0 Beta",
+      "latestVersion": "1.0 Beta",
       "gameVersion": "Minecraft Java",
       "status": "Beta",
       "completionPercentage": 100,
@@ -43,7 +36,30 @@
           "notes": [
             "Initial release of Pvp_Practice 1.0 Beta",
             "Requires VexBot mod",
-            "100% open source"
+            "100% open source combat training arena"
+          ]
+        }
+      ],
+      "versions": [
+        {
+          "version": "1.0 Beta",
+          "versionName": "1.0 Beta Initial Release",
+          "gameVersion": "Minecraft Java",
+          "releaseDate": "2026-09-08",
+          "status": "Beta",
+          "isLatest": true,
+          "fileSize": "Custom Map (.zip)",
+          "zipPassword": "123",
+          "googleDriveUrl": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
+          "directDownloadUrl": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
+          "changelogNotes": [
+            "Initial release of Pvp_Practice 1.0 Beta",
+            "Requires VexBot mod for sparring dummies",
+            "100% open source map layout"
+          ],
+          "requirements": [
+            "Minecraft Java Edition",
+            "VexBot Mod (Required for bot sparring routines)"
           ]
         }
       ],

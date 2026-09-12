@@ -6,74 +6,95 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { StatsBanner } from './components/StatsBanner';
-import { FilterBar } from './components/FilterBar';
+import { FilterBar, SortOption } from './components/FilterBar';
 import { ProjectCard } from './components/ProjectCard';
 import { ProjectDetailModal } from './components/ProjectDetailModal';
 import { DownloadPasswordDialog } from './components/DownloadPasswordDialog';
 import { DirectDownloadToast } from './components/DirectDownloadToast';
-import { GoogleLoginGate, GoogleUser } from './components/GoogleLoginGate';
+import { DripjectsLogo } from './components/DripjectsLogo';
 import { 
   fetchProjectsDatabase, 
-  recordDownloadApi, 
-  giveDiamondApi 
+  recordDownloadApi 
 } from './services/projectsApi';
 import { triggerDirectDownload } from './utils/googleDrive';
-import { Project, ProjectCategory, ProjectsDatabase } from './types';
+import { Project, ProjectCategory, ProjectsDatabase, ProjectVersion } from './types';
 import { initialProjectsDatabase } from './data/defaultProjects';
-import { SearchX, Share2, Check, ExternalLink, X } from 'lucide-react';
+import { SearchX, Check, X, Sparkles } from 'lucide-react';
 
 export default function App() {
-  // Google Authentication State
-  const [currentUser, setCurrentUser] = useState<GoogleUser | null>(() => {
-    try {
-      const saved = localStorage.getItem('dripjects_google_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-
   const [database, setDatabase] = useState<ProjectsDatabase>(initialProjectsDatabase);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory>('all');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'downloads' | 'newest' | 'diamonds' | 'title'>('downloads');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Modal & Dialog States
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [downloadDialogProject, setDownloadDialogProject] = useState<Project | null>(null);
+  const [projectModalTab, setProjectModalTab] = useState<'overview' | 'versions' | 'gallery' | 'features' | 'installation' | 'changelog'>('overview');
+  
+  // Download Target State (supports downloading specific versions)
+  const [downloadTarget, setDownloadTarget] = useState<{
+    project: Project;
+    version?: ProjectVersion | null;
+  } | null>(null);
 
   // Active Download Toast State
-  const [activeDownload, setActiveDownload] = useState<{ project: Project; url: string } | null>(null);
+  const [activeDownload, setActiveDownload] = useState<{ project: Project; url: string; versionTag?: string } | null>(null);
 
   // Custom Share Toast State
   const [shareToast, setShareToast] = useState<{ project: Project; url: string } | null>(null);
 
-  // Deep Linking: Extract requested project from URL path e.g. /dripjects/:project
+  // General Notification Toast
+  const [notificationToast, setNotificationToast] = useState<string | null>(null);
+
+  const showNotification = (msg: string) => {
+    setNotificationToast(msg);
+    setTimeout(() => setNotificationToast(null), 3500);
+  };
+
+  // Deep Linking: Extract requested project and section from URL path e.g. /dripjects/:slug or /dripjects/:slug/versions
   const checkUrlForProject = useCallback((projectsList: Project[]) => {
     try {
-      const pathname = window.location.pathname; // e.g. /dripjects/pvp-practice-1-0-beta
+      const pathname = window.location.pathname; // e.g. /dripjects/pvp-practice/versions
       const hash = window.location.hash; // e.g. #/dripjects/...
       const search = new URLSearchParams(window.location.search);
 
       let targetId = '';
-      if (pathname.startsWith('/dripjects/')) {
-        targetId = decodeURIComponent(pathname.replace('/dripjects/', '')).trim();
+      let targetTab: 'overview' | 'versions' = 'overview';
+
+      // Check URL pathname
+      const pathMatch = pathname.match(/^\/dripjects\/([^/]+)(?:\/([^/]+))?/);
+      if (pathMatch) {
+        targetId = decodeURIComponent(pathMatch[1]).trim();
+        if (pathMatch[2] && pathMatch[2].toLowerCase() === 'versions') {
+          targetTab = 'versions';
+        }
       } else if (hash.includes('/dripjects/')) {
-        targetId = decodeURIComponent(hash.split('/dripjects/')[1]).trim();
+        const hashPart = hash.split('/dripjects/')[1];
+        const parts = hashPart.split('/');
+        targetId = decodeURIComponent(parts[0]).trim();
+        if (parts[1] && parts[1].toLowerCase() === 'versions') {
+          targetTab = 'versions';
+        }
       } else if (search.get('project')) {
         targetId = search.get('project')!.trim();
+        if (search.get('tab') === 'versions') {
+          targetTab = 'versions';
+        }
       }
 
       if (targetId && projectsList.length > 0) {
         const found = projectsList.find(p => 
           p.id.toLowerCase() === targetId.toLowerCase() ||
+          p.slug?.toLowerCase() === targetId.toLowerCase() ||
           p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === targetId.toLowerCase() ||
-          p.title.toLowerCase() === targetId.toLowerCase()
+          targetId.toLowerCase().startsWith(p.slug?.toLowerCase() || p.id.toLowerCase())
         );
         if (found) {
           setSelectedProject(found);
+          setProjectModalTab(targetTab);
         }
       }
     } catch (err) {
@@ -105,12 +126,27 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [database.projects, checkUrlForProject]);
 
+  // Compute category counts for pills
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    database.projects.forEach(p => {
+      counts[p.category] = (counts[p.category] || 0) + 1;
+    });
+    return counts;
+  }, [database.projects]);
+
   // Filtered and Sorted Projects
   const filteredProjects = useMemo(() => {
     return database.projects
       .filter((project) => {
         if (selectedCategory !== 'all' && project.category !== selectedCategory) {
           return false;
+        }
+
+        if (selectedTag) {
+          const t = selectedTag.toLowerCase();
+          const hasTag = project.tags.some(tag => tag.toLowerCase() === t);
+          if (!hasTag) return false;
         }
 
         if (searchQuery.trim()) {
@@ -129,83 +165,64 @@ export default function App() {
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'downloads') {
-          return (b.downloads || 0) - (a.downloads || 0);
-        }
         if (sortBy === 'newest') {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        }
-        if (sortBy === 'diamonds') {
-          return (b.diamonds || 0) - (a.diamonds || 0);
         }
         if (sortBy === 'title') {
           return a.title.localeCompare(b.title);
         }
+        if (sortBy === 'title-desc') {
+          return b.title.localeCompare(a.title);
+        }
         return 0;
       });
-  }, [database.projects, selectedCategory, searchQuery, sortBy]);
+  }, [database.projects, selectedCategory, selectedTag, searchQuery, sortBy]);
 
   // Featured Project
   const featuredProject = useMemo(() => {
     return database.projects.find(p => p.featured) || database.projects[0];
   }, [database.projects]);
 
-  // Handler: When user clicks "Download", first show the Password Dialog!
-  const handleRequestDownload = (project: Project) => {
-    setDownloadDialogProject(project);
+  // Handler: When user clicks "Download" (supports specific older versions!)
+  const handleRequestDownload = (project: Project, version?: ProjectVersion | null) => {
+    setDownloadTarget({ project, version });
   };
 
   // Handler: When user confirms download from Password Dialog
-  const handleConfirmDownload = async (project: Project) => {
-    const targetUrl = project.directDownloadUrl || project.googleDriveUrl;
+  const handleConfirmDownload = async (project: Project, version?: ProjectVersion | null) => {
+    // Determine download URL
+    const targetUrl = version?.directDownloadUrl || version?.googleDriveUrl || project.directDownloadUrl || project.googleDriveUrl;
+    const versionLabel = version?.version || project.version;
 
     // Trigger browser download immediately
     triggerDirectDownload(targetUrl);
 
     // Show feedback toast
-    setActiveDownload({ project, url: targetUrl });
+    setActiveDownload({ project, url: targetUrl, versionTag: versionLabel });
 
-    // Increment download count
-    const newCount = await recordDownloadApi(project.id);
-    setDatabase(prev => {
-      const updated = prev.projects.map(p => 
-        p.id === project.id ? { ...p, downloads: newCount || p.downloads + 1 } : p
-      );
-      return {
-        ...prev,
-        projects: updated,
-        metadata: {
-          ...prev.metadata,
-          totalDownloads: prev.metadata.totalDownloads + 1,
-        }
-      };
-    });
-
-    if (selectedProject && selectedProject.id === project.id) {
-      setSelectedProject(prev => prev ? { ...prev, downloads: (prev.downloads || 0) + 1 } : null);
-    }
+    // Increment download count in background API silently
+    await recordDownloadApi(project.id);
   };
 
-  // Handler: Custom Share Link (e.g. dripjects.vercel.app/dripjects/{project})
+  // Handler: Custom Share Link (e.g. dripjects.vercel.app/dripjects/{project.slug})
   const handleShare = (project: Project, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
-    // Construct custom direct URL
     const origin = window.location.origin;
-    const projectSlug = encodeURIComponent(project.id);
+    const projectSlug = encodeURIComponent(project.slug || project.id);
     const customShareUrl = `${origin}/dripjects/${projectSlug}`;
 
-    // Update browser URL bar history
     try {
       window.history.pushState(null, '', `/dripjects/${projectSlug}`);
     } catch {
       // ignore
     }
 
-    // Copy custom link to clipboard
-    navigator.clipboard.writeText(customShareUrl);
-
-    // Show custom share notification toast
+    try {
+      navigator.clipboard.writeText(customShareUrl);
+    } catch {
+      // fallback
+    }
     setShareToast({ project, url: customShareUrl });
     setTimeout(() => {
       setShareToast(null);
@@ -213,10 +230,28 @@ export default function App() {
   };
 
   // Handler: Select Project (open modal and update URL)
-  const handleSelectProject = (project: Project) => {
+  const handleSelectProject = (project: Project, tab: 'overview' | 'versions' = 'overview') => {
     setSelectedProject(project);
+    setProjectModalTab(tab);
+    
+    const slug = encodeURIComponent(project.slug || project.id);
+    const targetPath = tab === 'versions' ? `/dripjects/${slug}/versions` : `/dripjects/${slug}`;
     try {
-      window.history.pushState(null, '', `/dripjects/${encodeURIComponent(project.id)}`);
+      window.history.pushState(null, '', targetPath);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Handler: Tab change within project modal
+  const handleTabChange = (tab: 'overview' | 'versions' | 'gallery' | 'features' | 'installation' | 'changelog') => {
+    setProjectModalTab(tab);
+    if (!selectedProject) return;
+
+    const slug = encodeURIComponent(selectedProject.slug || selectedProject.id);
+    const targetPath = tab === 'versions' ? `/dripjects/${slug}/versions` : `/dripjects/${slug}`;
+    try {
+      window.history.replaceState(null, '', targetPath);
     } catch {
       // ignore
     }
@@ -232,52 +267,11 @@ export default function App() {
     }
   };
 
-  // Handler: Diamond Upvote
-  const handleGiveDiamond = async (project: Project, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    const newCount = await giveDiamondApi(project.id);
-    setDatabase(prev => {
-      const updated = prev.projects.map(p => 
-        p.id === project.id ? { ...p, diamonds: newCount || p.diamonds + 1 } : p
-      );
-      return {
-        ...prev,
-        projects: updated,
-        metadata: {
-          ...prev.metadata,
-          totalDiamonds: prev.metadata.totalDiamonds + 1,
-        }
-      };
-    });
-
-    if (selectedProject && selectedProject.id === project.id) {
-      setSelectedProject(prev => prev ? { ...prev, diamonds: (prev.diamonds || 0) + 1 } : null);
-    }
-  };
-
-  // Handler: Google Sign Out
-  const handleSignOut = () => {
-    localStorage.removeItem('dripjects_google_user');
-    setCurrentUser(null);
-  };
-
-  // If user is not logged in with Google, enforce authentication gate
-  if (!currentUser) {
-    return (
-      <GoogleLoginGate
-        onLoginSuccess={(user) => setCurrentUser(user)}
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Public Sticky Navigation Header */}
       <Navbar
         metadata={database.metadata}
-        currentUser={currentUser}
-        onSignOut={handleSignOut}
       />
 
       {/* Main Content Area */}
@@ -285,7 +279,7 @@ export default function App() {
         {/* Hero & Highlights Banner */}
         <StatsBanner
           featuredProject={featuredProject}
-          onSelectProject={handleSelectProject}
+          onSelectProject={(p) => handleSelectProject(p, 'overview')}
           onRequestDownloadProject={handleRequestDownload}
           onShareProject={handleShare}
         />
@@ -293,9 +287,15 @@ export default function App() {
         {/* Filter and Category Bar */}
         <FilterBar
           selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          onSelectCategory={(cat) => {
+            setSelectedCategory(cat);
+            setSelectedTag(null);
+          }}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          selectedTag={selectedTag}
+          onClearTag={() => setSelectedTag(null)}
+          categoryCounts={categoryCounts}
           sortBy={sortBy}
           onSortChange={setSortBy}
           viewMode={viewMode}
@@ -303,7 +303,7 @@ export default function App() {
           totalResults={filteredProjects.length}
         />
 
-        {/* Projects Grid / List (Public View Only) */}
+        {/* Projects Grid / List */}
         {filteredProjects.length > 0 ? (
           <div
             className={
@@ -317,10 +317,10 @@ export default function App() {
                 key={project.id}
                 project={project}
                 viewMode={viewMode}
-                onSelect={handleSelectProject}
+                onSelect={(p) => handleSelectProject(p, 'overview')}
                 onRequestDownload={handleRequestDownload}
-                onGiveDiamond={handleGiveDiamond}
                 onShare={handleShare}
+                onSelectTag={(tag) => setSelectedTag(tag)}
               />
             ))}
           </div>
@@ -333,19 +333,33 @@ export default function App() {
             <div>
               <h3 className="text-lg font-bold text-white">No projects found</h3>
               <p className="text-sm text-slate-400 max-w-md mx-auto mt-1">
-                {searchQuery
+                {selectedTag
+                  ? `No projects found with tag #${selectedTag}.`
+                  : searchQuery
                   ? `No projects matched "${searchQuery}". Try different keywords.`
                   : `No projects currently in category "${selectedCategory}".`}
               </p>
             </div>
-            {searchQuery && (
+            {(searchQuery || selectedTag) && (
               <div className="flex items-center justify-center gap-3 pt-2">
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors cursor-pointer"
-                >
-                  Clear Search
-                </button>
+                {selectedTag && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTag(null)}
+                    className="px-4 py-2 text-xs font-semibold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 rounded-lg transition-colors cursor-pointer border border-emerald-500/30"
+                  >
+                    Clear Tag #{selectedTag}
+                  </button>
+                )}
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -355,34 +369,40 @@ export default function App() {
       {/* Public Clean Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-8 mt-16 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-white font-['Space_Grotesk',sans-serif]">DRIPJECTS</span>
-            <span>•</span>
-            <span>Open Source Minecraft Creations Vault</span>
-          </div>
+          <DripjectsLogo size="sm" />
 
-          <div className="flex items-center gap-4 text-slate-400">
+          <div className="flex items-center gap-4 text-slate-400 flex-wrap">
             <span>Direct Google Drive Delivery</span>
             <span>•</span>
-            <span>Password Protected Archives</span>
+            <span>All Versions Archive</span>
+            <span>•</span>
+            <span>100% Free For Everyone</span>
+            <span>•</span>
+            <span>No Auth Required</span>
           </div>
         </div>
       </footer>
 
-      {/* Project Detail Modal (Clean, Public View) */}
+      {/* Project Detail Modal with All Versions Tab & Slug Routing */}
       <ProjectDetailModal
         project={selectedProject}
+        initialTab={projectModalTab}
         onClose={handleCloseProjectModal}
         onRequestDownload={handleRequestDownload}
-        onGiveDiamond={handleGiveDiamond}
         onShare={handleShare}
+        onSelectTag={(tag) => {
+          setSelectedTag(tag);
+          handleCloseProjectModal();
+        }}
+        onTabChange={handleTabChange}
       />
 
       {/* Password Dialog (shown before unzipping/downloading) */}
       <DownloadPasswordDialog
-        project={downloadDialogProject}
-        isOpen={Boolean(downloadDialogProject)}
-        onClose={() => setDownloadDialogProject(null)}
+        project={downloadTarget?.project || null}
+        version={downloadTarget?.version || null}
+        isOpen={Boolean(downloadTarget)}
+        onClose={() => setDownloadTarget(null)}
         onConfirmDownload={handleConfirmDownload}
       />
 
@@ -405,7 +425,7 @@ export default function App() {
               </div>
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <span>Custom Share Link Copied!</span>
+                  <span>Direct Share Link Copied!</span>
                 </h4>
                 <p className="text-xs text-slate-300">
                   Direct link to <strong className="text-emerald-400">{shareToast.project.title}</strong> is now on your clipboard.
@@ -417,11 +437,22 @@ export default function App() {
             </div>
 
             <button
+              type="button"
               onClick={() => setShareToast(null)}
               className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* General Notification Toast */}
+      {notificationToast && (
+        <div className="fixed bottom-6 left-6 z-50 max-w-sm animate-in slide-in-from-bottom-5 duration-200">
+          <div className="px-4 py-3 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl flex items-center gap-2.5 text-xs text-slate-200">
+            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{notificationToast}</span>
           </div>
         </div>
       )}

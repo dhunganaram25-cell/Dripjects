@@ -1,0 +1,17 @@
+{
+  "appName": "Dripjects",
+  "siteName": "DRIPJECTS",
+  "tagline": "Custom Minecraft Maps & Creations Vault",
+  "owner": "ItzDrifter",
+  "version": "1.2.0",
+  "lastUpdated": "2026-09-12T03:03:08.561Z",
+  "downloadPolicies": {
+    "requireAuthForDownload": false,
+    "freeForAll": true
+  },
+  "branding": {
+    "logoText": "DRIPJECTS",
+    "badge": "Free Vault",
+    "accentColor": "#10b981"
+  }
+}

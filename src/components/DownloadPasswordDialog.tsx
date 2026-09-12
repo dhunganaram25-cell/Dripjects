@@ -7,23 +7,24 @@ import {
   X, 
   Sparkles, 
   AlertCircle, 
-  Layers, 
   ExternalLink,
-  Cpu,
-  FileCheck2
+  FileCheck2,
+  GitBranch
 } from 'lucide-react';
-import { Project } from '../types';
+import { Project, ProjectVersion } from '../types';
 import { useProjectThumbnail } from '../utils/thumbnailHelper';
 
 interface DownloadPasswordDialogProps {
   project: Project | null;
+  version?: ProjectVersion | null;
   isOpen: boolean;
   onClose: () => void;
-  onConfirmDownload: (project: Project) => void;
+  onConfirmDownload: (project: Project, version?: ProjectVersion | null) => void;
 }
 
 export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
   project,
+  version,
   isOpen,
   onClose,
   onConfirmDownload,
@@ -32,8 +33,11 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
 
   const [copied, setCopied] = useState(false);
 
-  // Extract password from project.zipPassword or fallback to default
-  const password = project.zipPassword || '123';
+  // Extract password from chosen version or project
+  const password = version?.zipPassword || project.zipPassword || '123';
+  const displayVersion = version?.version || project.version;
+  const displayGameVersion = version?.gameVersion || project.gameVersion;
+  const displayFileSize = version?.fileSize || project.fileSize;
 
   // Project thumbnail with YouTube -> Gallery image fallback
   const { 
@@ -44,22 +48,31 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
   } = useProjectThumbnail(project);
 
   const handleCopyPassword = () => {
-    navigator.clipboard.writeText(password);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    try {
+      navigator.clipboard.writeText(password);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   const handleProceedDownload = () => {
     // Also copy password automatically to make it effortless for user
-    navigator.clipboard.writeText(password);
-    onConfirmDownload(project);
+    try {
+      navigator.clipboard.writeText(password);
+    } catch {
+      // ignore clipboard error in restricted iframes
+    }
+    onConfirmDownload(project, version);
     onClose();
   };
 
   // Compile full requirements list
-  const requiredMods = project.requiredMods || [];
-  const textRequirements = project.requirements || [
-    `Minecraft Platform: ${project.gameVersion || 'Java Edition'}`,
+  const requiredMods = version?.requiredMods || project.requiredMods || [];
+  const textRequirements = version?.requirements || project.requirements || [
+    `Minecraft Platform: ${displayGameVersion || 'Java Edition'}`,
     ...(requiredMods.map(m => `${m.name} (${m.required !== false ? 'Required' : 'Optional'})`)),
     'Archive extractor with password support (7-Zip / WinRAR)',
   ];
@@ -75,13 +88,14 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
       >
         {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors cursor-pointer z-10"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Project Mini Card with YouTube/Gallery Thumbnail */}
+        {/* Project Mini Card with YouTube/Gallery Thumbnail & Version Badge */}
         <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-slate-950/80 border border-slate-800">
           <div className="relative w-20 h-14 rounded-xl overflow-hidden bg-slate-900 shrink-0 border border-slate-700/60 shadow-md">
             <img
@@ -100,22 +114,23 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
           </div>
 
           <div className="flex-1 min-w-0 pr-6">
-            <div className="flex items-center gap-1.5 mb-0.5">
+            <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
               <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 {project.category.replace('-', ' ')}
               </span>
-              <span className="text-[10px] font-mono text-slate-400">
-                {project.version}
+              <span className="text-[10px] font-mono text-emerald-400 font-bold bg-slate-900 px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                <GitBranch className="w-3 h-3" />
+                v{displayVersion}
               </span>
               <span className="text-[10px] font-mono text-slate-400">
-                • {project.fileSize}
+                • {displayFileSize}
               </span>
             </div>
             <h3 className="text-base font-extrabold text-white truncate">
               {project.title}
             </h3>
             <p className="text-[11px] text-slate-400 truncate">
-              By {project.author} • {project.gameVersion}
+              By {project.author} • {displayGameVersion}
             </p>
           </div>
         </div>
@@ -132,7 +147,7 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
               </h4>
             </div>
             <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Read Before Installing
+              v{displayVersion}
             </span>
           </div>
 
@@ -215,6 +230,7 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
               {password}
             </span>
             <button
+              type="button"
               onClick={handleCopyPassword}
               className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 copied
@@ -236,14 +252,16 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
         <div className="space-y-2 pt-1">
           <button
             id="confirm-download-after-password-btn"
+            type="button"
             onClick={handleProceedDownload}
             className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/25 active:scale-98 cursor-pointer"
           >
             <HardDriveDownload className="w-4 h-4 stroke-[2.5]" />
-            <span>Copy Password & Download (.zip)</span>
+            <span>Copy Password & Download v{displayVersion} (.zip)</span>
           </button>
 
           <button
+            type="button"
             onClick={onClose}
             className="w-full py-2 text-xs text-slate-400 hover:text-slate-300 transition-colors cursor-pointer text-center"
           >
@@ -254,4 +272,3 @@ export const DownloadPasswordDialog: React.FC<DownloadPasswordDialogProps> = ({
     </div>
   );
 };
-

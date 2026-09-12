@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { 
   HardDriveDownload, 
-  Gem, 
   CheckCircle2, 
   Clock, 
   Share2,
   Check,
-  KeyRound
+  KeyRound,
+  Tag
 } from 'lucide-react';
 import { Project } from '../types';
 import { ProjectMediaCover } from './ProjectMediaCover';
@@ -16,8 +16,8 @@ interface ProjectCardProps {
   viewMode: 'grid' | 'list';
   onSelect: (project: Project) => void;
   onRequestDownload: (project: Project, e: React.MouseEvent) => void;
-  onGiveDiamond: (project: Project, e: React.MouseEvent) => void;
   onShare: (project: Project, e: React.MouseEvent) => void;
+  onSelectTag?: (tag: string, e: React.MouseEvent) => void;
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -36,18 +36,27 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   viewMode,
   onSelect,
   onRequestDownload,
-  onGiveDiamond,
   onShare,
+  onSelectTag,
 }) => {
   const [copiedShare, setCopiedShare] = useState(false);
+  const [copiedPass, setCopiedPass] = useState(false);
   const catColor = CATEGORY_COLORS[project.category] || CATEGORY_COLORS.other;
   const is100Percent = project.completionPercentage >= 100;
+  const password = project.zipPassword || '123';
 
   const handleShareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onShare(project, e);
     setCopiedShare(true);
     setTimeout(() => setCopiedShare(false), 2200);
+  };
+
+  const handleCopyPass = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(password);
+    setCopiedPass(true);
+    setTimeout(() => setCopiedPass(false), 2000);
   };
 
   if (viewMode === 'list') {
@@ -75,12 +84,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         {/* Content */}
         <div className="flex-1 flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${catColor.bg} ${catColor.text} ${catColor.border}`}>
                 {project.category.replace('-', ' ')}
               </span>
-              <span className="text-xs font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded">
-                {project.version}
+              <span className="text-xs font-mono text-emerald-400 font-semibold bg-slate-800/80 px-2 py-0.5 rounded">
+                v{project.version}
               </span>
               <span className="text-xs text-slate-400">
                 {project.gameVersion}
@@ -95,36 +104,50 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               {project.tagline}
             </p>
 
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {project.tags.slice(0, 4).map((tag, idx) => (
-                <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-slate-800/60 text-slate-300">
-                  #{tag}
+            {/* Clickable Tags */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+              {project.requiredMods && project.requiredMods.length > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
+                  Requires {project.requiredMods[0].name}
                 </span>
+              )}
+              {project.tags.map((tag, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectTag?.(tag, e);
+                  }}
+                  className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-slate-700/50 hover:border-emerald-500/40 transition-colors cursor-pointer"
+                  title={`Filter by tag #${tag}`}
+                >
+                  <Tag className="w-2.5 h-2.5" />
+                  <span>#{tag}</span>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Bottom Bar: Stats, Share & Download */}
-          <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-800/80">
-            <div className="flex items-center gap-4 text-xs text-slate-400">
+          {/* Bottom Bar: Password info, Share & Download */}
+          <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-800/80 flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-xs">
               <button
-                onClick={(e) => onGiveDiamond(project, e)}
-                className="flex items-center gap-1 hover:text-cyan-400 transition-colors cursor-pointer"
-                title="Give a Diamond"
+                type="button"
+                onClick={handleCopyPass}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-700"
+                title="Click to copy unzip password"
               >
-                <Gem className="w-3.5 h-3.5 text-cyan-400" />
-                <span>{project.diamonds.toLocaleString()}</span>
+                <KeyRound className="w-3 h-3 text-emerald-400" />
+                <span className="text-[11px] font-mono text-emerald-400 font-bold">{password}</span>
+                <span className="text-[10px] text-slate-400">({copiedPass ? 'Copied!' : 'Copy Password'})</span>
               </button>
-              <div className="flex items-center gap-1">
-                <HardDriveDownload className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{project.downloads.toLocaleString()}</span>
-              </div>
             </div>
 
             <div className="flex items-center gap-2">
               {/* Share Project Link Button */}
               <button
+                type="button"
                 onClick={handleShareClick}
                 className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                 title="Share project link"
@@ -133,14 +156,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 <span className="hidden sm:inline">{copiedShare ? 'Copied' : 'Share'}</span>
               </button>
 
-              {/* Direct Download Button (triggers password prompt) */}
+              {/* Direct Download Button */}
               <button
                 id={`download-list-btn-${project.id}`}
-                onClick={(e) => onRequestDownload(project, e)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequestDownload(project, e);
+                }}
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-transform active:scale-95 shadow-sm shadow-emerald-500/20 cursor-pointer"
               >
                 <HardDriveDownload className="w-3.5 h-3.5" />
-                <span>Download</span>
+                <span>Download (.zip)</span>
               </button>
             </div>
           </div>
@@ -160,7 +187,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         <ProjectMediaCover 
           project={project} 
           aspectRatio="video" 
-          className="rounded-none w-full"
+          className="rounded-none w-full" 
           allowWatchFull={false}
         />
 
@@ -216,43 +243,50 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             {project.tagline}
           </p>
 
-          {/* Tags & Required Mod indicator */}
-          <div className="flex flex-wrap items-center gap-1 mt-2.5">
+          {/* Clickable Tags & Required Mod indicator */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
             {project.requiredMods && project.requiredMods.length > 0 && (
               <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
                 Requires {project.requiredMods[0].name}
               </span>
             )}
-            {project.tags.slice(0, 2).map((tag, idx) => (
-              <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-slate-800/80 text-slate-300">
-                #{tag}
-              </span>
+            {project.tags.map((tag, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectTag?.(tag, e);
+                }}
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-slate-700/50 hover:border-emerald-500/40 transition-colors cursor-pointer"
+                title={`Filter by tag #${tag}`}
+              >
+                <Tag className="w-2.5 h-2.5" />
+                <span>#{tag}</span>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Bottom Actions & Stats Bar */}
+        {/* Bottom Actions & Password Bar */}
         <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-          {/* Diamond & Download Counts */}
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            <button
-              onClick={(e) => onGiveDiamond(project, e)}
-              className="flex items-center gap-1 hover:text-cyan-300 transition-colors cursor-pointer"
-              title="Give a Diamond"
-            >
-              <Gem className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="font-semibold text-slate-300">{project.diamonds.toLocaleString()}</span>
-            </button>
-            <div className="flex items-center gap-1 text-slate-400" title="Total Downloads">
-              <HardDriveDownload className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{project.downloads.toLocaleString()}</span>
-            </div>
-          </div>
+          {/* Password Copy button */}
+          <button
+            type="button"
+            onClick={handleCopyPass}
+            className="flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 text-emerald-400 border border-slate-800 transition-colors cursor-pointer"
+            title="Click to copy unzip password"
+          >
+            <KeyRound className="w-3 h-3 text-emerald-400" />
+            <span>Pass: {password}</span>
+            {copiedPass && <span className="text-[9px] text-white bg-emerald-600 px-1 rounded">✓</span>}
+          </button>
 
           {/* Actions: Share & Download */}
           <div className="flex items-center gap-1.5">
             {/* Share Project Button */}
             <button
+              type="button"
               onClick={handleShareClick}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer"
               title="Copy shareable link"
@@ -260,15 +294,19 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               {copiedShare ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
             </button>
 
-            {/* Direct Download Button (triggers password prompt) */}
+            {/* Direct Download Button */}
             <button
               id={`download-grid-btn-${project.id}`}
-              onClick={(e) => onRequestDownload(project, e)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestDownload(project, e);
+              }}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-transform active:scale-95 shadow-sm shadow-emerald-500/20 cursor-pointer"
-              title="View unzip password & download"
+              title="Download map archive directly"
             >
               <HardDriveDownload className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Download</span>
+              <span>Download (.zip)</span>
             </button>
           </div>
         </div>
@@ -276,3 +314,4 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     </div>
   );
 };
+

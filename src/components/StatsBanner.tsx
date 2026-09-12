@@ -49,8 +49,8 @@ export const StatsBanner: React.FC<StatsBannerProps> = ({
               <span>100% Open Source Vault</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              <span>Google Identity Verified</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>100% Free For Everyone</span>
             </div>
           </div>
         </div>
@@ -97,24 +97,26 @@ export const StatsBanner: React.FC<StatsBannerProps> = ({
                   {featuredProject.tagline}
                 </p>
 
-                {/* Direct Download Button */}
+                {/* Direct Download Button & Password indicator */}
                 <div className="pt-2 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 text-xs text-slate-400">
-                    <span>💎 {featuredProject.diamonds}</span>
-                    <span>⬇️ {featuredProject.downloads.toLocaleString()}</span>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="font-mono text-emerald-400 font-semibold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                      Zip Password: 123
+                    </span>
                   </div>
 
                   <button
                     id={`featured-download-${featuredProject.id}`}
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       onRequestDownloadProject(featuredProject, e);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-transform active:scale-98 shadow-md shadow-emerald-500/20 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition-all active:scale-95 shadow-md shadow-emerald-500/20 cursor-pointer"
                     title="Download immediately via Google Drive"
                   >
                     <HardDriveDownload className="w-3.5 h-3.5" />
-                    <span>Download</span>
+                    <span>Download (.zip)</span>
                   </button>
                 </div>
               </div>

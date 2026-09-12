@@ -14,42 +14,100 @@ app.use(express.json({ limit: '10mb' }));
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'projects.json');
+const PRIV_FILE = path.join(DATA_DIR, 'priv.json');
 
-// Helper to safely load database
-async function loadDatabase() {
+// Helper to safely load projects
+async function loadProjects() {
   try {
     if (!fs.existsSync(DB_FILE)) {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
-      return null;
+      return [];
     }
     const raw = await fs.promises.readFile(DB_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.projects)) return parsed.projects;
+    return [];
   } catch (err) {
     console.error('Error reading projects.json:', err);
-    return null;
+    return [];
   }
 }
 
-// Helper to safely save database
-async function saveDatabase(data: any) {
+// Helper to safely save projects
+async function saveProjects(projects: any[]) {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    await fs.promises.writeFile(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const payload = { projects };
+    await fs.promises.writeFile(DB_FILE, JSON.stringify(payload, null, 2), 'utf-8');
     
     // Also sync to public/data/projects.json for static builds
     const publicDataDir = path.join(process.cwd(), 'public', 'data');
     if (!fs.existsSync(publicDataDir)) {
       fs.mkdirSync(publicDataDir, { recursive: true });
     }
-    await fs.promises.writeFile(path.join(publicDataDir, 'projects.json'), JSON.stringify(data, null, 2), 'utf-8');
+    await fs.promises.writeFile(path.join(publicDataDir, 'projects.json'), JSON.stringify(payload, null, 2), 'utf-8');
     
     return true;
   } catch (err) {
     console.error('Error saving projects.json:', err);
+    return false;
+  }
+}
+
+// Helper to safely load priv website data
+async function loadPriv() {
+  try {
+    if (!fs.existsSync(PRIV_FILE)) {
+      return {
+        appName: 'Dripjects',
+        siteName: 'DRIPJECTS',
+        tagline: 'Custom Minecraft Maps & Creations Vault',
+        owner: 'ItzDrifter (Creator)',
+        version: '1.2.0',
+        lastUpdated: new Date().toISOString(),
+        stats: {
+          totalProjects: 1,
+          totalDownloads: 128,
+          totalDiamonds: 42
+        },
+        downloadPolicies: {
+          guestDownloadLimit: 3,
+          authenticatedDownloadLimit: 'unlimited',
+          requireAuthForDownload: true
+        }
+      };
+    }
+    const raw = await fs.promises.readFile(PRIV_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Error reading priv.json:', err);
+    return null;
+  }
+}
+
+// Helper to safely save priv website data
+async function savePriv(privData: any) {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    await fs.promises.writeFile(PRIV_FILE, JSON.stringify(privData, null, 2), 'utf-8');
+    
+    // Also sync to public/data/priv.json for static builds
+    const publicDataDir = path.join(process.cwd(), 'public', 'data');
+    if (!fs.existsSync(publicDataDir)) {
+      fs.mkdirSync(publicDataDir, { recursive: true });
+    }
+    await fs.promises.writeFile(path.join(publicDataDir, 'priv.json'), JSON.stringify(privData, null, 2), 'utf-8');
+    
+    return true;
+  } catch (err) {
+    console.error('Error saving priv.json:', err);
     return false;
   }
 }
@@ -86,53 +144,90 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', app: 'Dripjects' });
 });
 
-// GET all projects and database metadata
+// GET all projects and website metadata (combining projects.json and priv.json)
 app.get('/api/projects', async (req, res) => {
-  const db = await loadDatabase();
-  if (!db) {
-    return res.status(500).json({ error: 'Database not initialized' });
-  }
-  res.json(db);
+  const [projects, priv] = await Promise.all([loadProjects(), loadPriv()]);
+  
+  const totalDownloads = projects.reduce((sum, p) => sum + (Number(p.downloads) || 0), 0);
+  const totalDiamonds = projects.reduce((sum, p) => sum + (Number(p.diamonds) || 0), 0);
+
+  const metadata = {
+    appName: priv?.appName || 'Dripjects',
+    owner: priv?.owner || 'ItzDrifter',
+    lastUpdated: priv?.lastUpdated || new Date().toISOString(),
+    version: priv?.version || '1.2.0',
+    totalProjects: projects.length,
+    totalDownloads: priv?.stats?.totalDownloads ?? totalDownloads,
+    totalDiamonds: priv?.stats?.totalDiamonds ?? totalDiamonds
+  };
+
+  res.json({
+    metadata,
+    projects,
+    priv
+  });
+});
+
+// GET website private data
+app.get('/api/priv', async (req, res) => {
+  const priv = await loadPriv();
+  res.json(priv || {});
 });
 
 // POST create project
 app.post('/api/projects', async (req, res) => {
-  const db = await loadDatabase();
-  if (!db) {
-    return res.status(500).json({ error: 'Database could not be loaded' });
-  }
-
+  const projects = await loadProjects();
   const newProject = req.body;
   if (!newProject.title) {
     return res.status(400).json({ error: 'Title is required' });
   }
 
-  const id = newProject.id || `drip-proj-${Date.now().toString(36)}`;
+  const slug = newProject.slug || newProject.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const id = newProject.id || slug;
   const driveUrl = newProject.googleDriveUrl || '';
   const directDownloadUrl = computeDirectDownloadUrl(driveUrl);
+  const initialVersion = newProject.version || '1.0';
 
   const formattedProject = {
     id,
+    slug,
     title: newProject.title,
     tagline: newProject.tagline || '',
     category: newProject.category || 'maps',
-    version: newProject.version || 'v1.0.0',
-    gameVersion: newProject.gameVersion || 'Minecraft 1.21.x',
+    version: initialVersion,
+    latestVersion: initialVersion,
+    gameVersion: newProject.gameVersion || 'Minecraft Java',
     status: newProject.status || '100% Complete',
     completionPercentage: Number(newProject.completionPercentage) || 100,
     googleDriveUrl: driveUrl,
     directDownloadUrl,
-    fileSize: newProject.fileSize || '10 MB',
-    bannerImage: newProject.bannerImage || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
-    galleryImages: newProject.galleryImages || [newProject.bannerImage || 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80'],
+    fileSize: newProject.fileSize || 'Custom Map (.zip)',
+    bannerImage: newProject.bannerImage || '/assets/pvpprac1.0beta.png',
+    youtubeVideoUrl: newProject.youtubeVideoUrl || '',
+    galleryImages: Array.isArray(newProject.galleryImages) ? newProject.galleryImages : [],
     description: newProject.description || '',
     features: Array.isArray(newProject.features) ? newProject.features : [],
     installation: newProject.installation || '',
     changelog: Array.isArray(newProject.changelog) ? newProject.changelog : [
       {
-        version: newProject.version || 'v1.0.0',
+        version: initialVersion,
         date: new Date().toISOString().split('T')[0],
         notes: ['Initial release on Dripjects']
+      }
+    ],
+    versions: Array.isArray(newProject.versions) && newProject.versions.length > 0 ? newProject.versions : [
+      {
+        version: initialVersion,
+        versionName: `${initialVersion} Release`,
+        gameVersion: newProject.gameVersion || 'Minecraft Java',
+        releaseDate: new Date().toISOString().split('T')[0],
+        status: newProject.status || 'Beta',
+        isLatest: true,
+        fileSize: newProject.fileSize || 'Custom Map (.zip)',
+        zipPassword: newProject.zipPassword || '123',
+        googleDriveUrl: driveUrl,
+        directDownloadUrl,
+        changelogNotes: ['Initial release on Dripjects']
       }
     ],
     diamonds: Number(newProject.diamonds) || 0,
@@ -140,89 +235,98 @@ app.post('/api/projects', async (req, res) => {
     views: Number(newProject.views) || 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    author: newProject.author || 'Saphal',
-    tags: Array.isArray(newProject.tags) ? newProject.tags : ['Minecraft', 'Creation'],
+    author: newProject.author || 'ItzDrifter',
+    zipPassword: newProject.zipPassword || '123',
+    tags: Array.isArray(newProject.tags) ? newProject.tags : ['Minecraft', 'PvP'],
     featured: Boolean(newProject.featured),
     mirrorLinks: newProject.mirrorLinks || []
   };
 
-  db.projects.unshift(formattedProject);
-  db.metadata.totalProjects = db.projects.length;
-  db.metadata.lastUpdated = new Date().toISOString();
+  projects.unshift(formattedProject);
+  await saveProjects(projects);
 
-  await saveDatabase(db);
-  res.status(201).json({ success: true, project: formattedProject, database: db });
+  const priv = await loadPriv();
+  if (priv && priv.stats) {
+    priv.stats.totalProjects = projects.length;
+    priv.lastUpdated = new Date().toISOString();
+    await savePriv(priv);
+  }
+
+  res.status(201).json({ success: true, project: formattedProject });
 });
 
 // PUT update project
 app.put('/api/projects/:id', async (req, res) => {
   const { id } = req.params;
-  const db = await loadDatabase();
-  if (!db) {
-    return res.status(500).json({ error: 'Database could not be loaded' });
-  }
+  const projects = await loadProjects();
 
-  const idx = db.projects.findIndex((p: any) => p.id === id);
+  const idx = projects.findIndex((p: any) => p.id === id || p.slug === id);
   if (idx === -1) {
     return res.status(404).json({ error: 'Project not found' });
   }
 
   const updatedFields = req.body;
-  const driveUrl = updatedFields.googleDriveUrl !== undefined ? updatedFields.googleDriveUrl : db.projects[idx].googleDriveUrl;
-  const directDownloadUrl = driveUrl ? computeDirectDownloadUrl(driveUrl) : db.projects[idx].directDownloadUrl;
+  const driveUrl = updatedFields.googleDriveUrl !== undefined ? updatedFields.googleDriveUrl : projects[idx].googleDriveUrl;
+  const directDownloadUrl = driveUrl ? computeDirectDownloadUrl(driveUrl) : projects[idx].directDownloadUrl;
 
-  db.projects[idx] = {
-    ...db.projects[idx],
+  projects[idx] = {
+    ...projects[idx],
     ...updatedFields,
-    id, // protect id
+    id: projects[idx].id, // protect id
     googleDriveUrl: driveUrl,
     directDownloadUrl,
     updatedAt: new Date().toISOString()
   };
 
-  db.metadata.lastUpdated = new Date().toISOString();
-  await saveDatabase(db);
-  res.json({ success: true, project: db.projects[idx], database: db });
+  await saveProjects(projects);
+  res.json({ success: true, project: projects[idx] });
 });
 
 // DELETE project
 app.delete('/api/projects/:id', async (req, res) => {
   const { id } = req.params;
-  const db = await loadDatabase();
-  if (!db) {
-    return res.status(500).json({ error: 'Database could not be loaded' });
-  }
+  const projects = await loadProjects();
 
-  const beforeLen = db.projects.length;
-  db.projects = db.projects.filter((p: any) => p.id !== id);
-  if (db.projects.length === beforeLen) {
+  const beforeLen = projects.length;
+  const filtered = projects.filter((p: any) => p.id !== id && p.slug !== id);
+  if (filtered.length === beforeLen) {
     return res.status(404).json({ error: 'Project not found' });
   }
 
-  db.metadata.totalProjects = db.projects.length;
-  db.metadata.lastUpdated = new Date().toISOString();
-  await saveDatabase(db);
-  res.json({ success: true, database: db });
+  await saveProjects(filtered);
+
+  const priv = await loadPriv();
+  if (priv && priv.stats) {
+    priv.stats.totalProjects = filtered.length;
+    priv.lastUpdated = new Date().toISOString();
+    await savePriv(priv);
+  }
+
+  res.json({ success: true, remaining: filtered.length });
 });
 
 // POST increment download count
 app.post('/api/projects/:id/download', async (req, res) => {
   const { id } = req.params;
-  const db = await loadDatabase();
-  if (!db) return res.status(500).json({ error: 'Database could not be loaded' });
+  const [projects, priv] = await Promise.all([loadProjects(), loadPriv()]);
 
-  const project = db.projects.find((p: any) => p.id === id);
+  const project = projects.find((p: any) => p.id === id || p.slug === id);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
   project.downloads = (project.downloads || 0) + 1;
-  db.metadata.totalDownloads = (db.metadata.totalDownloads || 0) + 1;
-  db.metadata.lastUpdated = new Date().toISOString();
+  await saveProjects(projects);
 
-  await saveDatabase(db);
+  if (priv) {
+    if (!priv.stats) priv.stats = {};
+    priv.stats.totalDownloads = (priv.stats.totalDownloads || 0) + 1;
+    priv.lastUpdated = new Date().toISOString();
+    await savePriv(priv);
+  }
+
   res.json({ 
     success: true, 
     downloads: project.downloads, 
-    totalDownloads: db.metadata.totalDownloads,
+    totalDownloads: priv?.stats?.totalDownloads || project.downloads,
     directDownloadUrl: project.directDownloadUrl 
   });
 });
@@ -230,52 +334,56 @@ app.post('/api/projects/:id/download', async (req, res) => {
 // POST increment diamond count
 app.post('/api/projects/:id/diamond', async (req, res) => {
   const { id } = req.params;
-  const db = await loadDatabase();
-  if (!db) return res.status(500).json({ error: 'Database could not be loaded' });
+  const [projects, priv] = await Promise.all([loadProjects(), loadPriv()]);
 
-  const project = db.projects.find((p: any) => p.id === id);
+  const project = projects.find((p: any) => p.id === id || p.slug === id);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
   project.diamonds = (project.diamonds || 0) + 1;
-  db.metadata.totalDiamonds = (db.metadata.totalDiamonds || 0) + 1;
-  db.metadata.lastUpdated = new Date().toISOString();
+  await saveProjects(projects);
 
-  await saveDatabase(db);
+  if (priv) {
+    if (!priv.stats) priv.stats = {};
+    priv.stats.totalDiamonds = (priv.stats.totalDiamonds || 0) + 1;
+    priv.lastUpdated = new Date().toISOString();
+    await savePriv(priv);
+  }
+
   res.json({ 
     success: true, 
     diamonds: project.diamonds, 
-    totalDiamonds: db.metadata.totalDiamonds 
+    totalDiamonds: priv?.stats?.totalDiamonds || project.diamonds 
   });
 });
 
-// POST replace/sync entire database (from JSON editor)
+// POST sync whole database (backward compatibility)
 app.post('/api/database/sync', async (req, res) => {
   const newDb = req.body;
-  if (!newDb || !Array.isArray(newDb.projects)) {
-    return res.status(400).json({ error: 'Invalid JSON schema: must have a "projects" array' });
-  }
-
-  // Ensure metadata is consistent
-  newDb.metadata = {
-    appName: newDb.metadata?.appName || 'Dripjects',
-    owner: newDb.metadata?.owner || 'Saphal',
-    lastUpdated: new Date().toISOString(),
-    version: newDb.metadata?.version || '1.0.0',
-    totalProjects: newDb.projects.length,
-    totalDownloads: newDb.projects.reduce((sum: number, p: any) => sum + (Number(p.downloads) || 0), 0),
-    totalDiamonds: newDb.projects.reduce((sum: number, p: any) => sum + (Number(p.diamonds) || 0), 0),
-  };
-
-  // Ensure every project has directDownloadUrl calculated
-  newDb.projects = newDb.projects.map((p: any) => ({
+  const rawProjects = Array.isArray(newDb) ? newDb : (newDb?.projects || []);
+  
+  const projects = rawProjects.map((p: any) => ({
     ...p,
     directDownloadUrl: p.googleDriveUrl ? computeDirectDownloadUrl(p.googleDriveUrl) : (p.directDownloadUrl || '')
   }));
 
-  const saved = await saveDatabase(newDb);
-  if (!saved) return res.status(500).json({ error: 'Failed to write projects.json' });
+  await saveProjects(projects);
 
-  res.json({ success: true, database: newDb });
+  if (newDb?.metadata || newDb?.priv) {
+    const priv = await loadPriv();
+    const updatedPriv = {
+      ...priv,
+      ...(newDb.priv || {}),
+      lastUpdated: new Date().toISOString(),
+      stats: {
+        totalProjects: projects.length,
+        totalDownloads: projects.reduce((sum: number, p: any) => sum + (Number(p.downloads) || 0), 0),
+        totalDiamonds: projects.reduce((sum: number, p: any) => sum + (Number(p.diamonds) || 0), 0),
+      }
+    };
+    await savePriv(updatedPriv);
+  }
+
+  res.json({ success: true, projectsCount: projects.length });
 });
 
 // Start the server with Vite middleware integration
@@ -295,7 +403,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Dripjects server running on http://0.0.0.0:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
