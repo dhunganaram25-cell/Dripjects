@@ -15,15 +15,11 @@ import {
   GitBranch, 
   ArrowRight, 
   Sparkles,
-  Tag,
-  RefreshCw,
-  Camera
+  Tag
 } from 'lucide-react';
 import { Project, ProjectVersion } from '../types';
 import { ProjectMediaCover } from './ProjectMediaCover';
 import { ProjectImageGallery } from './ProjectImageGallery';
-import { ChooseThumbnailModal } from './ChooseThumbnailModal';
-import { syncProjectThumbnail, updateProjectThumbnailAndGallery } from '../utils/thumbnailHelper';
 
 interface ProjectDetailModalProps {
   project: Project | null;
@@ -33,7 +29,6 @@ interface ProjectDetailModalProps {
   onShare: (project: Project) => void;
   onSelectTag?: (tag: string) => void;
   onTabChange?: (tab: 'overview' | 'versions' | 'gallery' | 'features' | 'installation' | 'changelog') => void;
-  onUpdateProject?: (updated: Project) => void;
 }
 
 export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
@@ -44,35 +39,12 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onShare,
   onSelectTag,
   onTabChange,
-  onUpdateProject,
 }) => {
   if (!project) return null;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'versions' | 'gallery' | 'features' | 'installation' | 'changelog'>(initialTab);
   const [copiedShare, setCopiedShare] = useState(false);
   const [copiedPass, setCopiedPass] = useState(false);
-  const [isSyncingThumb, setIsSyncingThumb] = useState(false);
-  const [justSyncedThumb, setJustSyncedThumb] = useState(false);
-  const [isThumbnailChooserOpen, setIsThumbnailChooserOpen] = useState(false);
-
-  const handleSelectThumbnail = async (imageUrl: string, base64Data?: string, fileName?: string) => {
-    const res = await updateProjectThumbnailAndGallery(project, imageUrl, base64Data, fileName);
-    if (res.success && res.project) {
-      onUpdateProject?.(res.project);
-    }
-  };
-
-  const handleSyncThumbnail = async () => {
-    if (isSyncingThumb) return;
-    setIsSyncingThumb(true);
-    try {
-      await syncProjectThumbnail(project);
-      setJustSyncedThumb(true);
-      setTimeout(() => setJustSyncedThumb(false), 2200);
-    } finally {
-      setIsSyncingThumb(false);
-    }
-  };
 
   useEffect(() => {
     if (initialTab) {
@@ -142,40 +114,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Choose Picture for Thumbnail button */}
-            <button
-              type="button"
-              onClick={() => setIsThumbnailChooserOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
-              title="Choose or upload a custom picture for thumbnail (also adds to gallery)"
-            >
-              <Camera className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Choose Thumbnail</span>
-            </button>
-
-            {/* Sync Thumbnail from YouTube button */}
-            {project.youtubeVideoUrl && (
-              <button
-                type="button"
-                onClick={handleSyncThumbnail}
-                disabled={isSyncingThumb}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-emerald-400 border border-slate-700/80 transition-all cursor-pointer"
-                title="Sync and force-refresh the newest thumbnail directly from YouTube"
-              >
-                {justSyncedThumb ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400 font-bold">Thumbnail Synced!</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingThumb ? 'animate-spin text-emerald-400' : 'text-slate-400'}`} />
-                    <span className="hidden md:inline">{isSyncingThumb ? 'Syncing...' : 'Sync YouTube'}</span>
-                  </>
-                )}
-              </button>
-            )}
-
             {/* Custom Share Button */}
             <button
               id="modal-share-project-btn"
@@ -210,7 +148,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 aspectRatio="video" 
                 allowWatchFull={true}
                 isCardPreview={false}
-                onOpenThumbnailChooser={() => setIsThumbnailChooserOpen(true)}
               />
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none z-20">
                 <div className="bg-slate-950/90 backdrop-blur-md px-3 py-1 rounded-md text-xs font-mono text-emerald-400 border border-slate-800">
@@ -536,8 +473,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   images={images} 
                   projectTitle={project.title}
                   currentThumbnailUrl={project.bannerImage}
-                  onSetAsThumbnail={(imgUrl) => handleSelectThumbnail(imgUrl)}
-                  onOpenThumbnailChooser={() => setIsThumbnailChooserOpen(true)}
                 />
               </div>
             )}
@@ -649,14 +584,6 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Choose Thumbnail Modal */}
-      <ChooseThumbnailModal
-        isOpen={isThumbnailChooserOpen}
-        project={project}
-        onClose={() => setIsThumbnailChooserOpen(false)}
-        onSelectThumbnail={handleSelectThumbnail}
-      />
     </div>
   );
 };

@@ -7,7 +7,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Play, 
   Image as ImageIcon, 
-  Camera, 
   X, 
   Smartphone, 
   MonitorPlay 
@@ -22,7 +21,6 @@ interface ProjectMediaCoverProps {
   aspectRatio?: 'video' | 'banner';
   allowWatchFull?: boolean;
   isCardPreview?: boolean;
-  onOpenThumbnailChooser?: () => void;
 }
 
 export const ProjectMediaCover: React.FC<ProjectMediaCoverProps> = ({
@@ -31,7 +29,6 @@ export const ProjectMediaCover: React.FC<ProjectMediaCoverProps> = ({
   aspectRatio = 'video',
   allowWatchFull = true,
   isCardPreview = false,
-  onOpenThumbnailChooser,
 }) => {
   const [isPlayingFull, setIsPlayingFull] = useState(false);
   const [isPreviewActive, setIsPreviewActive] = useState(false);
@@ -115,24 +112,6 @@ export const ProjectMediaCover: React.FC<ProjectMediaCoverProps> = ({
 
         {/* Gradient Vignette overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent pointer-events-none" />
-
-        {/* Change / Choose Picture Button */}
-        {onOpenThumbnailChooser && (
-          <div className="absolute top-3 left-3 z-20 flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenThumbnailChooser();
-              }}
-              title="Choose or change picture for thumbnail"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 hover:bg-slate-900 text-slate-300 hover:text-emerald-400 text-[11px] font-semibold border border-slate-700/80 backdrop-blur-md transition-all cursor-pointer shadow-lg active:scale-95"
-            >
-              <Camera className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Choose Picture</span>
-            </button>
-          </div>
-        )}
 
         {/* YouTube Video Badge on Desktop */}
         {videoId && !isTouchOrMobile && (

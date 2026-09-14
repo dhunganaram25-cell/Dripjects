@@ -12,10 +12,7 @@ import {
   ExternalLink, 
   ZoomIn, 
   ImageIcon,
-  Check,
-  Star,
-  Camera,
-  UploadCloud
+  Check
 } from 'lucide-react';
 import { getSafeImageCandidates } from '../utils/imageUtils';
 
@@ -23,8 +20,6 @@ interface ProjectImageGalleryProps {
   images: string[];
   projectTitle: string;
   currentThumbnailUrl?: string;
-  onSetAsThumbnail?: (url: string) => void;
-  onOpenThumbnailChooser?: () => void;
 }
 
 interface GalleryCardProps {
@@ -33,7 +28,6 @@ interface GalleryCardProps {
   projectTitle: string;
   isCurrentThumbnail: boolean;
   onClick: (workingUrl: string) => void;
-  onSetAsThumbnail?: (url: string) => void;
 }
 
 const GalleryCard: React.FC<GalleryCardProps> = ({
@@ -42,7 +36,6 @@ const GalleryCard: React.FC<GalleryCardProps> = ({
   projectTitle,
   isCurrentThumbnail,
   onClick,
-  onSetAsThumbnail,
 }) => {
   const candidates = React.useMemo(() => getSafeImageCandidates(imgUrl), [imgUrl]);
   const [candidateIdx, setCandidateIdx] = useState(0);
@@ -99,36 +92,21 @@ const GalleryCard: React.FC<GalleryCardProps> = ({
       {isCurrentThumbnail && (
         <div className="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 text-[10px] font-bold shadow-md">
           <Check className="w-3 h-3 stroke-[3]" />
-          <span>Thumbnail</span>
+          <span>Cover</span>
         </div>
       )}
 
       {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-between p-2 text-white">
-        <div className="w-full flex justify-end">
-          {onSetAsThumbnail && !isCurrentThumbnail && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSetAsThumbnail(currentSrc);
-              }}
-              title="Set this picture as project thumbnail"
-              className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-bold shadow-md transition-all cursor-pointer"
-            >
-              <Star className="w-3 h-3 fill-current" />
-              <span>Make Thumbnail</span>
-            </button>
-          )}
-        </div>
+      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-between p-2.5 text-white">
+        <div className="w-full" />
 
-        <div className="p-2 rounded-lg bg-black/60 text-emerald-400 backdrop-blur-sm shadow">
+        <div className="p-2.5 rounded-full bg-slate-900/80 text-emerald-400 backdrop-blur-md shadow-lg border border-slate-700/60 transform scale-90 group-hover:scale-100 transition-transform">
           <ZoomIn className="w-4 h-4" />
         </div>
 
         <div className="w-full flex justify-between items-center text-[10px] text-slate-300">
-          <span>Click to expand</span>
-          <span className="font-mono bg-black/70 px-1.5 py-0.5 rounded">#{index + 1}</span>
+          <span>Click to view</span>
+          <span className="font-mono bg-black/70 px-1.5 py-0.5 rounded text-slate-400">#{index + 1}</span>
         </div>
       </div>
     </div>
@@ -139,8 +117,6 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
   images,
   projectTitle,
   currentThumbnailUrl,
-  onSetAsThumbnail,
-  onOpenThumbnailChooser,
 }) => {
   const [activeLightboxIndex, setActiveLightboxIndex] = useState<number | null>(null);
   const [lightboxCandidateIdx, setLightboxCandidateIdx] = useState(0);
@@ -196,18 +172,6 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
             {images.length} photo{images.length !== 1 ? 's' : ''}
           </span>
         </h4>
-
-        {/* Change / Upload Thumbnail Button */}
-        {onOpenThumbnailChooser && (
-          <button
-            type="button"
-            onClick={onOpenThumbnailChooser}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all cursor-pointer w-fit"
-          >
-            <Camera className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Choose / Upload Thumbnail Picture</span>
-          </button>
-        )}
       </div>
 
       {/* Thumbnails Grid */}
@@ -220,7 +184,6 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
             projectTitle={projectTitle}
             isCurrentThumbnail={Boolean(currentThumbnailUrl && currentThumbnailUrl === imgUrl)}
             onClick={() => setActiveLightboxIndex(index)}
-            onSetAsThumbnail={onSetAsThumbnail}
           />
         ))}
       </div>
@@ -245,22 +208,10 @@ export const ProjectImageGallery: React.FC<ProjectImageGalleryProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Set as thumbnail from lightbox */}
-              {onSetAsThumbnail && !isCurrentActiveThumb && (
-                <button
-                  type="button"
-                  onClick={() => onSetAsThumbnail(currentLightboxSrc)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all cursor-pointer shadow"
-                >
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <span>Set as Thumbnail</span>
-                </button>
-              )}
-
               {isCurrentActiveThumb && (
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold">
                   <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Current Thumbnail</span>
+                  <span>Cover Photo</span>
                 </span>
               )}
 

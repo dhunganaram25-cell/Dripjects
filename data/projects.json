@@ -6,13 +6,13 @@
       "title": "Pvp_Practice",
       "tagline": "Custom PvP practice map — Requires VexBot mod and is totally open source.",
       "category": "maps",
-      "version": "1.0 Beta",
-      "latestVersion": "1.0 Beta",
+      "version": "1.1 Public",
+      "latestVersion": "1.1 Public",
       "gameVersion": "Minecraft Java",
-      "status": "Beta",
-      "completionPercentage": 100,
-      "googleDriveUrl": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
-      "directDownloadUrl": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
+      "status": "Release 1.1",
+      "completionPercentage": 75,
+      "googleDriveUrl": "https://drive.usercontent.google.com/download?id=1LutajNxe-IOl2MuFrbZQcE_4Z8MPOQx2&export=download",
+      "directDownloadUrl": "https://drive.usercontent.google.com/download?id=1LutajNxe-IOl2MuFrbZQcE_4Z8MPOQx2&export=download",
       "fileSize": "Custom Map (.zip)",
       "bannerImage": "/assets/pvpprac1.0beta.png",
       "youtubeVideoUrl": "https://youtu.be/tf4zaQ_-m0g",
@@ -32,11 +32,12 @@
       "installation": "1. Download the map file via the direct link.\n2. Extract the folder into your Minecraft '.minecraft/saves' folder.\n3. Make sure the VexBot mod is loaded in your mods directory.\n4. Launch Minecraft and load the Pvp_Practice 1.0 Beta world.",
       "changelog": [
         {
-          "version": "1.0 Beta",
-          "date": "2026-09-08",
+          "version": "1.1 Public",
+          "date": "2026-09-14",
           "notes": [
-            "Initial release of Pvp_Practice 1.0 Beta",
+            "Initial release of Pvp_Practice 1.1 Public",
             "Requires VexBot mod",
+            "Requires Carpet mod",
             "100% open source combat training arena"
           ]
         }
@@ -48,7 +49,7 @@
           "gameVersion": "Minecraft Java",
           "releaseDate": "2026-09-08",
           "status": "Beta",
-          "isLatest": true,
+          "isLatest": false,
           "fileSize": "Custom Map (.zip)",
           "zipPassword": "123",
           "googleDriveUrl": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download",
@@ -62,6 +63,28 @@
             "Minecraft Java Edition",
             "VexBot Mod (Required for bot sparring routines)"
           ]
+        },
+        {
+          "version": "1.1 Public",
+          "versionName": "1.1 Initial Release",
+          "gameVersion": "Minecraft Java",
+          "releaseDate": "2026-09-14",
+          "status": "Public Release",
+          "isLatest": true,
+          "fileSize": "Custom Map (.zip)",
+          "zipPassword": "",
+          "googleDriveUrl": "https://drive.usercontent.google.com/download?id=1LutajNxe-IOl2MuFrbZQcE_4Z8MPOQx2&export=download",
+          "directDownloadUrl": "https://drive.usercontent.google.com/download?id=1LutajNxe-IOl2MuFrbZQcE_4Z8MPOQx2&export=download",
+          "changelogNotes": [
+            "Initial release of Pvp_Practice 1.1 Public",
+            "Requires VexBot, Carpet mod for sparring dummies",
+            "100% open source map layout"
+          ],
+          "requirements": [
+            "Minecraft Java Edition",
+            "VexBot Mod (Required for bot sparring routines)",
+            "Carpet Mod (Required For raw functionality)"
+          ]
         }
       ],
       "diamonds": 42,
@@ -74,6 +97,7 @@
       "requirements": [
         "Minecraft Java Edition",
         "VexBot Mod (Required for bot sparring & combat routines)",
+        "Carpet Mod (Required For raw functionality)",
         "Archive extraction tool with password support (WinRAR, 7-Zip, etc.)"
       ],
       "requiredMods": [
@@ -82,6 +106,13 @@
           "url": "https://modrinth.com/mod/vexbot",
           "version": "Latest for Minecraft Java",
           "description": "Required for sparring bots, practice dummy combat routines, and AI duel mechanics.",
+          "required": true
+        },
+        {
+          "name": "Carpet Mod",
+          "url": "https://modrinth.com/mod/carpet",
+          "version": "Latest for Minecraft Java",
+          "description": "Required for map's functionality",
           "required": true
         }
       ],
@@ -97,7 +128,7 @@
       "mirrorLinks": [
         {
           "label": "Google Drive Direct Download",
-          "url": "https://drive.usercontent.google.com/download?id=1qiW-nvYXhQuCC_Fts6orcKJmp1dXZM-g&export=download"
+          "url": "https://drive.usercontent.google.com/download?id=1LutajNxe-IOl2MuFrbZQcE_4Z8MPOQx2&export=download"
         }
       ]
     }
