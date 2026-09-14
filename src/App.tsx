@@ -54,10 +54,19 @@ export default function App() {
     setTimeout(() => setNotificationToast(null), 3500);
   };
 
-  // Deep Linking: Extract requested project and section from URL path e.g. /dripjects/:slug or /dripjects/:slug/versions
+  const slugifyVersion = (version: string) => {
+    return version
+      .trim()
+      .toLowerCase()
+      .replace(/^v/i, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'latest';
+  };
+
+  // Deep Linking: Extract requested project and section from URL path e.g. /dripjects/:slug or /dripjects/:slug/versions/:version
   const checkUrlForProject = useCallback((projectsList: Project[]) => {
     try {
-      const pathname = window.location.pathname; // e.g. /dripjects/pvp-practice/versions
+      const pathname = window.location.pathname; // e.g. /dripjects/pvp-practice/versions/1.0-beta
       const hash = window.location.hash; // e.g. #/dripjects/...
       const search = new URLSearchParams(window.location.search);
 
@@ -65,10 +74,10 @@ export default function App() {
       let targetTab: 'overview' | 'versions' = 'overview';
 
       // Check URL pathname
-      const pathMatch = pathname.match(/^\/dripjects\/([^/]+)(?:\/([^/]+))?/);
+      const pathMatch = pathname.match(/^\/dripjects\/([^/]+)(?:\/versions(?:\/([^/]+))?)?$/);
       if (pathMatch) {
         targetId = decodeURIComponent(pathMatch[1]).trim();
-        if (pathMatch[2] && pathMatch[2].toLowerCase() === 'versions') {
+        if (pathname.includes('/versions')) {
           targetTab = 'versions';
         }
       } else if (hash.includes('/dripjects/')) {
@@ -204,16 +213,18 @@ export default function App() {
     await recordDownloadApi(project.id);
   };
 
-  // Handler: Custom Share Link (e.g. dripjects.vercel.app/dripjects/{project.slug})
-  const handleShare = (project: Project, e?: React.MouseEvent) => {
+  // Handler: Custom Share Link (e.g. dripjects.vercel.app/dripjects/{project.slug} or /versions/{version})
+  const handleShare = (project: Project, version?: ProjectVersion, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
     const origin = window.location.origin;
     const projectSlug = encodeURIComponent(project.slug || project.id);
-    const customShareUrl = `${origin}/dripjects/${projectSlug}`;
+    const versionSlug = version ? slugifyVersion(version.version) : '';
+    const customShareUrl = `${origin}/dripjects/${projectSlug}${versionSlug ? `/versions/${encodeURIComponent(versionSlug)}` : ''}`;
+    const targetPath = versionSlug ? `/dripjects/${projectSlug}/versions/${versionSlug}` : `/dripjects/${projectSlug}`;
 
     try {
-      window.history.pushState(null, '', `/dripjects/${projectSlug}`);
+      window.history.pushState(null, '', targetPath);
     } catch {
       // ignore
     }

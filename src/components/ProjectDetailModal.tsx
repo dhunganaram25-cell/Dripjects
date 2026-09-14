@@ -26,7 +26,7 @@ interface ProjectDetailModalProps {
   initialTab?: 'overview' | 'versions' | 'gallery' | 'features' | 'installation' | 'changelog';
   onClose: () => void;
   onRequestDownload: (project: Project, version?: ProjectVersion) => void;
-  onShare: (project: Project) => void;
+  onShare: (project: Project, version?: ProjectVersion) => void;
   onSelectTag?: (tag: string) => void;
   onTabChange?: (tab: 'overview' | 'versions' | 'gallery' | 'features' | 'installation' | 'changelog') => void;
 }
@@ -63,6 +63,12 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
   const handleShareClick = () => {
     onShare(project);
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 2500);
+  };
+
+  const handleVersionShareClick = (version: ProjectVersion) => {
+    onShare(project, version);
     setCopiedShare(true);
     setTimeout(() => setCopiedShare(false), 2500);
   };
@@ -430,18 +436,30 @@ export const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Version Download Button */}
-                        <button
-                          onClick={() => onRequestDownload(project, ver)}
-                          className={`shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer shadow active:scale-98 ${
-                            ver.isLatest
-                              ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold shadow-emerald-500/20'
-                              : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/40'
-                          }`}
-                        >
-                          <HardDriveDownload className="w-4 h-4" />
-                          <span>Download {ver.version}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleVersionShareClick(ver)}
+                            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-[10px] sm:text-xs font-bold rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+                            title={`Copy share link for v${ver.version}`}
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                            <span>Share</span>
+                          </button>
+
+                          {/* Version Download Button */}
+                          <button
+                            onClick={() => onRequestDownload(project, ver)}
+                            className={`shrink-0 flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer shadow active:scale-98 ${
+                              ver.isLatest
+                                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold shadow-emerald-500/20'
+                                : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/40'
+                            }`}
+                          >
+                            <HardDriveDownload className="w-4 h-4" />
+                            <span>Download {ver.version}</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Version Changelog / Notes */}
